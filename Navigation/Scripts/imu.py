@@ -1,6 +1,6 @@
 from time import sleep
 from machine import Pin, I2C
-from utime import sleep_ms,ticks_ms
+from utime import sleep_ms, ticks_ms
 from math import sqrt, degrees, acos, atan2
 import utime
 import math
@@ -20,6 +20,7 @@ class Vector3d(object):
     Internally uses sensor relative coordinates.
     Returns vehicle-relative x, y and z values.
     '''
+
     def __init__(self, transposition, scaling, update_function):
         self._vector = [0, 0, 0]
         self._ivector = [0, 0, 0]
@@ -44,14 +45,14 @@ class Vector3d(object):
         calibration routine, sets cal
         '''
         self.update()
-        maxvec = self._vector[:]                # Initialise max and min lists with current values
+        maxvec = self._vector[:]  # Initialise max and min lists with current values
         minvec = self._vector[:]
         while not stopfunc():
             waitfunc()
             self.update()
             maxvec = list(map(max, maxvec, self._vector))
             minvec = list(map(min, minvec, self._vector))
-        self.cal = tuple(map(lambda a, b: (a + b)/2, maxvec, minvec))
+        self.cal = tuple(map(lambda a, b: (a + b) / 2, maxvec, minvec))
 
     @property
     def _calvector(self):
@@ -61,7 +62,7 @@ class Vector3d(object):
         return list(map(lambda val, offset: val - offset, self._vector, self.cal))
 
     @property
-    def x(self):                                # Corrected, vehicle relative floating point values
+    def x(self):  # Corrected, vehicle relative floating point values
         self.update()
         return self._calvector[self._transpose[0]] * self._scale[0]
 
@@ -85,12 +86,12 @@ class Vector3d(object):
     @property
     def magnitude(self):
         x, y, z = self.xyz  # All measurements must correspond to the same instant
-        return sqrt(x**2 + y**2 + z**2)
+        return sqrt(x ** 2 + y ** 2 + z ** 2)
 
     @property
     def inclination(self):
         x, y, z = self.xyz
-        return degrees(acos(z / sqrt(x**2 + y**2 + z**2)))
+        return degrees(acos(z / sqrt(x ** 2 + y ** 2 + z ** 2)))
 
     @property
     def elevation(self):
@@ -125,7 +126,7 @@ class Vector3d(object):
     @property
     def scale(self):
         return tuple(self._scale)
-    
+
 
 class MPUException(OSError):
     '''
@@ -159,15 +160,15 @@ class MPU6050(object):
 
         self._accel = Vector3d(transposition, scaling, self._accel_callback)
         self._gyro = Vector3d(transposition, scaling, self._gyro_callback)
-        self.buf1 = bytearray(1)                # Pre-allocated buffers for reads: allows reads to
-        self.buf2 = bytearray(2)                # be done in interrupt handlers
+        self.buf1 = bytearray(1)  # Pre-allocated buffers for reads: allows reads to
+        self.buf2 = bytearray(2)  # be done in interrupt handlers
         self.buf3 = bytearray(3)
         self.buf6 = bytearray(6)
 
-        sleep_ms(200)                           # Ensure PSU and device have settled
-        if isinstance(side_str, str):           # Non-pyb targets may use other than X or Y
+        sleep_ms(200)  # Ensure PSU and device have settled
+        if isinstance(side_str, str):  # Non-pyb targets may use other than X or Y
             self._mpu_i2c = I2C(side_str)
-        elif hasattr(side_str, 'readfrom'):     # Soft or hard I2C instance. See issue #3097
+        elif hasattr(side_str, 'readfrom'):  # Soft or hard I2C instance. See issue #3097
             self._mpu_i2c = side_str
         else:
             raise ValueError("Invalid I2C instance")
@@ -187,15 +188,15 @@ class MPU6050(object):
                 raise ValueError('Device address must be 0 or 1')
             self.mpu_addr = self._mpu_addr[device_addr]
 
-        self.chip_id                     # Test communication by reading chip_id: throws exception on error
+        self.chip_id  # Test communication by reading chip_id: throws exception on error
         # Can communicate with chip. Set it up.
-        self.wake()                             # wake it up
-        self.passthrough = True                 # Enable mag access from main I2C bus
-        self.accel_range = 0                    # default to highest sensitivity
-        self.gyro_range = 0                     # Likewise for gyro
+        self.wake()  # wake it up
+        self.passthrough = True  # Enable mag access from main I2C bus
+        self.accel_range = 0  # default to highest sensitivity
+        self.gyro_range = 0  # Likewise for gyro
 
     # read from device
-    def _read(self, buf, memaddr, addr):        # addr = I2C device address, memaddr = memory location within the I2C device
+    def _read(self, buf, memaddr, addr):  # addr = I2C device address, memaddr = memory location within the I2C device
         '''
         Read bytes to pre-allocated buffer Caller traps OSError.
         '''
@@ -263,7 +264,7 @@ class MPU6050(object):
             self._read(self.buf2, 0x41, self.mpu_addr)
         except OSError:
             raise MPUException(self._I2Cerror)
-        return bytes_toint(self.buf2[0], self.buf2[1])/340 + 35  # I think
+        return bytes_toint(self.buf2[0], self.buf2[1]) / 340 + 35  # I think
 
     # passthrough
     @property
@@ -362,7 +363,7 @@ class MPU6050(object):
         '''
         try:
             self._read(self.buf1, 0x1C, self.mpu_addr)
-            ari = self.buf1[0]//8
+            ari = self.buf1[0] // 8
         except OSError:
             raise MPUException(self._I2Cerror)
         return ari
@@ -394,7 +395,7 @@ class MPU6050(object):
         # set range
         try:
             self._read(self.buf1, 0x1B, self.mpu_addr)
-            gri = self.buf1[0]//8
+            gri = self.buf1[0] // 8
         except OSError:
             raise MPUException(self._I2Cerror)
         return gri
@@ -435,9 +436,9 @@ class MPU6050(object):
         self._accel._ivector[1] = bytes_toint(self.buf6[2], self.buf6[3])
         self._accel._ivector[2] = bytes_toint(self.buf6[4], self.buf6[5])
         scale = (16384, 8192, 4096, 2048)
-        self._accel._vector[0] = self._accel._ivector[0]/scale[self.accel_range]
-        self._accel._vector[1] = self._accel._ivector[1]/scale[self.accel_range]
-        self._accel._vector[2] = self._accel._ivector[2]/scale[self.accel_range]
+        self._accel._vector[0] = self._accel._ivector[0] / scale[self.accel_range]
+        self._accel._vector[1] = self._accel._ivector[1] / scale[self.accel_range]
+        self._accel._vector[2] = self._accel._ivector[2] / scale[self.accel_range]
 
     def get_accel_irq(self):
         '''
@@ -469,9 +470,9 @@ class MPU6050(object):
         self._gyro._ivector[1] = bytes_toint(self.buf6[2], self.buf6[3])
         self._gyro._ivector[2] = bytes_toint(self.buf6[4], self.buf6[5])
         scale = (131, 65.5, 32.8, 16.4)
-        self._gyro._vector[0] = self._gyro._ivector[0]/scale[self.gyro_range]
-        self._gyro._vector[1] = self._gyro._ivector[1]/scale[self.gyro_range]
-        self._gyro._vector[2] = self._gyro._ivector[2]/scale[self.gyro_range]
+        self._gyro._vector[0] = self._gyro._ivector[0] / scale[self.gyro_range]
+        self._gyro._vector[1] = self._gyro._ivector[1] / scale[self.gyro_range]
+        self._gyro._vector[2] = self._gyro._ivector[2] / scale[self.gyro_range]
 
     def get_gyro_irq(self):
         '''
@@ -485,8 +486,8 @@ class MPU6050(object):
 
 
 def get_rotation(accel_x, accel_y, accel_z):
-    roll = atan2(accel_y, sqrt(accel_x**2 + accel_z**2))
-    pitch = atan2(-accel_x, sqrt(accel_y**2 + accel_z**2))
+    roll = atan2(accel_y, sqrt(accel_x ** 2 + accel_z ** 2))
+    pitch = atan2(-accel_x, sqrt(accel_y ** 2 + accel_z ** 2))
     return degrees(roll), degrees(pitch)
 
 
@@ -495,13 +496,14 @@ def collect_samples(num_samples=100):
     for _ in range(num_samples):
         ax = imu.accel.x
         ay = imu.accel.y
-        az = imu.accel.z 
+        az = imu.accel.z
         gx = imu.gyro.x
-        gy = imu.gyro.y 
+        gy = imu.gyro.y
         gz = imu.gyro.z
         samples.append((ax, ay, az, gx, gy, gz))
         sleep_ms(10)
     return samples
+
 
 def multi_position_accel_calibration():
     positions = [
@@ -513,26 +515,27 @@ def multi_position_accel_calibration():
         "Rest on -X edge (Y down)"
     ]
     all_samples = []
-    
+
     for pos in positions:
         print(f"{pos}. Press Enter when ready...")
         input()
         samples = collect_samples(20)
         all_samples.extend(samples)
         print("Samples collected. Move to next position.")
-    
+
     # Process samples (simplified for brevity)
     accel_samples = [s[:3] for s in all_samples]
     accel_bias = [sum(axis) / len(accel_samples) for axis in zip(*accel_samples)]
     accel_scale = [16384 / (max(axis) - min(axis)) for axis in zip(*accel_samples)]
-    
+
     return accel_bias, accel_scale
+
 
 def gyro_calibration_with_rotation():
     print("Keep the IMU still for initial gyro bias...")
     static_samples = collect_samples(20)
     gyro_bias = [sum(axis) / len(static_samples) for axis in zip(*[s[3:] for s in static_samples])]
-    
+
     print("Now, slowly rotate the IMU around each axis.")
     for axis in ['X', 'Y', 'Z']:
         print(f"Rotate around {axis} axis. Press Enter to start, then again to stop...")
@@ -541,52 +544,52 @@ def gyro_calibration_with_rotation():
         rotation_samples = collect_samples(20)
         duration = (ticks_ms() - start_time) / 1000  # in seconds
         input()
-        
+
         # Calculate total rotation
-        total_rotation = sum(s[3 + "XYZ".index(axis)] - gyro_bias["XYZ".index(axis)] 
+        total_rotation = sum(s[3 + "XYZ".index(axis)] - gyro_bias["XYZ".index(axis)]
                              for s in rotation_samples) * 0.0175  # Convert to radians
-        
+
         print(f"Estimated rotation: {degrees(total_rotation):.2f} degrees")
         print(f"Rotation rate: {degrees(total_rotation) / duration:.2f} deg/s")
-    
+
     return gyro_bias
+
 
 def temperature_compensation():
     print("We'll collect data at different temperatures.")
     temp_ranges = ["Room temperature", "After gentle heating", "After cooling"]
     temp_data = []
-    
-       
+
     for temp in temp_ranges:
         print(f"Prepare the IMU for {temp} readings. Press Enter when ready...")
         input()
         samples = collect_samples(20)
         temp_data.append((temp, samples))
-    
+
     # Process temperature data (simplified)
     for temp, samples in temp_data:
         accel_avg = [sum(axis) / len(samples) for axis in zip(*[s[:3] for s in samples])]
         gyro_avg = [sum(axis) / len(samples) for axis in zip(*[s[3:] for s in samples])]
         print(f"{temp} averages:")
         print(f"Accel: {accel_avg}, Gyro: {gyro_avg}")
-    
+
     # You would typically fit a curve to this data for temperature compensation
+
 
 # Main calibration routine
 def advanced_calibration():
     print("Starting advanced IMU calibration...")
-    
+
     # accel_bias, accel_scale = multi_position_accel_calibration()
     # print(f"Accelerometer bias: {accel_bias}")
     # print(f"Accelerometer scale factors: {accel_scale}")
-    
-    #g yro_bias = gyro_calibration_with_rotation()
+
+    # g yro_bias = gyro_calibration_with_rotation()
     # print(f"Gyroscope bias: {gyro_bias}")
     # print("Advanced calibration complete!")
-    return [0.07534748306666673, -0.009919429263333359, 0.05217854646666667], [0.984142318001577, 0.9910474226597741, 0.9716522402219719], [0,0,0]
+    return [0.07534748306666673, -0.009919429263333359, 0.05217854646666667], [0.984142318001577, 0.9910474226597741,
+                                                                               0.9716522402219719], [0, 0, 0]
 
-    
-    
 
 class ExtendedKalmanFilter:
     def __init__(self, initial_state, initial_P, Q, R):
@@ -602,50 +605,47 @@ class ExtendedKalmanFilter:
     def convert_accel(self, accel_normalized):
         return [a * self.g for a in accel_normalized]
 
-    def predict(self, dt):
+    def predict(self, u, dt):
         # State transition function
 
         # Compute Jacobian F
         F = np.eye(self.n)
-        F[0, 4] = dt
-        F[1, 5] = dt
-        F[2, 6] = dt
-        F[3, 7] = dt
 
+        # Control matrix
+        B = np.eye(self.n)
         # predict 
-        self.x = np.dot(F, self.x)
+        self.x = np.dot(F, self.x) + np.dot(B, u)
 
         # Update covariance
-        self.P = np.dot(np.dot(F , self.P ), F.transpose()) + self.Q
+        self.P = np.dot(np.dot(F, self.P), F.transpose()) + self.Q
 
     def update(self, z, dt):
         # Convert accelerometer readings from normalized to m/s²
         z_converted = np.array(self.convert_accel(z[:3]) + list(z[3:]))
 
-        # Compute Jacobian H
+        # Compute Jacobin H
         H = np.zeros((self.m, self.n))
-        H[0, 0] = self.g * math.cos(self.x[0])
-        H[1, 0] = self.g * math.sin(self.x[1]) * math.sin(self.x[0])
-        H[1, 1] = -self.g * math.cos(self.x[1]) * math.cos(self.x[0])
-        H[2, 0] = self.g * math.cos(self.x[1]) * math.sin(self.x[0])
-        H[2, 1] = self.g * math.sin(self.x[1]) * math.cos(self.x[0])
-        H[3, 4] = H[4, 5] = H[5, 6] = 1
-        H[6, 3] = 1
-        H[6, 7] = dt  # Correction for vertical velocity
+        H[0, 0] = self.g * math.cos(self.x[0]) * math.sin(self.x[1])
+        H[0, 1] = self.g * math.sin(self.x[0]) * math.cos(self.x[1])
 
-        # estimate measurment
-        z_hat = np.dot(H,self.x)
+        H[1, 0] = self.g * math.cos(self.x[0]) * math.cos(self.x[1])
+        H[1, 1] = -self.g * math.sin(self.x[0]) * math.sin(self.x[1])
+
+        H[2, 0] = -self.g * math.sin(self.x[0])
+
+        # estimate measurement
+        z_hat = np.dot(H, self.x)
 
         # Compute Kalman gain
-        S = np.dot(np.dot(H , self.P) , H.transpose() )+ self.R
+        S = np.dot(np.dot(H, self.P), H.transpose()) + self.R
         S_inv = np.linalg.inv(S)
-        K = np.dot(np.dot(self.P , H.transpose()), S_inv)
+        K = np.dot(np.dot(self.P, H.transpose()), S_inv)
         # Update state
         y = z_converted - z_hat
-        self.x += np.dot(K , y)
+        self.x = self.x + np.dot(K, y)
 
         # Update covariance
-        self.P = np.dot(self.I - np.dot(K , H) , self.P)
+        self.P = np.dot(self.I - np.dot(K, H), self.P)
 
     def get_state(self):
         return self.x
@@ -656,9 +656,10 @@ imu = MPU6050(i2c)
 # Run the calibration
 accel_bias, accel_scale, gyro_bias = advanced_calibration()
 # Initialize EKF
-initial_state = np.array([0, 0, 0, 0, 0, 0, 0, 0])
-initial_P = np.eye(8) * 5
-Q = np.eye(8) * 100
+initial_state = np.array([0, 0, 0])
+initial_P = np.eye(3)
+
+
 R = np.eye(7) * 1
 ekf = ExtendedKalmanFilter(initial_state, initial_P, Q, R)
 
@@ -666,13 +667,13 @@ ekf = ExtendedKalmanFilter(initial_state, initial_P, Q, R)
 last_time = utime.ticks_us()
 while True:
     # Get sensor data (replace with actual sensor readings)
-    ax=round((imu.accel.x - accel_bias[0])*accel_scale[0],2)
-    ay=round((imu.accel.y - accel_bias[1])*accel_scale[1],2)
-    az=round((imu.accel.z - accel_bias[2])*accel_scale[2],2)
-    gx=round(imu.gyro.x - gyro_bias[0],2)
-    gy=round(imu.gyro.y - gyro_bias[1],2)
-    gz=round(imu.gyro.z - gyro_bias[2],2)
-    tem=round(imu.temperature,2)
+    ax = round((imu.accel.x - accel_bias[0]) * accel_scale[0], 2)
+    ay = round((imu.accel.y - accel_bias[1]) * accel_scale[1], 2)
+    az = round((imu.accel.z - accel_bias[2]) * accel_scale[2], 2)
+    gx = round(imu.gyro.x - gyro_bias[0], 2)
+    gy = round(imu.gyro.y - gyro_bias[1], 2)
+    gz = round(imu.gyro.z - gyro_bias[2], 2)
+    tem = round(imu.temperature, 2)
 
     accel = [ax, ay, az]
     gyro = [gx, gy, gz]
@@ -684,20 +685,17 @@ while True:
     dt = utime.ticks_diff(current_time, last_time) / 1e6
     last_time = current_time
 
+    B = np.eye(3) * dt
+    Q = np.dot(B.transpose(), B) , gyr
     # EKF predict and update steps
-    ekf.predict(dt)
+    ekf.predict(gyro,dt)
     ekf.update(z, dt)
 
     # Get updated state
     state = ekf.get_state()
     print(f"ax: {ax} m/s², ay; {ay} m/s², az: {az} m/s²")
-    print(f"Pitch: {math.degrees(state[0]):.2f}°, Roll: {math.degrees(state[1]):.2f}°, Yaw: {math.degrees(state[2]):.2f}°")
+    print(
+        f"Pitch: {math.degrees(state[0]):.2f}°, Roll: {math.degrees(state[1]):.2f}°, Yaw: {math.degrees(state[2]):.2f}°")
     print(f"Altitude: {state[3]:.2f}m, Vertical Velocity: {state[7]:.2f}m/s")
 
     utime.sleep_ms(100)  # Adjust as needed
-
-
-
-
-
-
