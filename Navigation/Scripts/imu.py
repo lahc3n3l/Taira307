@@ -533,62 +533,42 @@ def multi_position_accel_calibration():
 
 def gyro_calibration_with_rotation():
     print("Keep the IMU still for initial gyro bias...")
-    static_samples = collect_samples(20)
-    gyro_bias = [sum(axis) / len(static_samples) for axis in zip(*[s[3:] for s in static_samples])]
-
-    print("Now, slowly rotate the IMU around each axis.")
-    for axis in ['X', 'Y', 'Z']:
-        print(f"Rotate around {axis} axis. Press Enter to start, then again to stop...")
-        input()
-        start_time = ticks_ms()
-        rotation_samples = collect_samples(20)
-        duration = (ticks_ms() - start_time) / 1000  # in seconds
-        input()
-
-        # Calculate total rotation
-        total_rotation = sum(s[3 + "XYZ".index(axis)] - gyro_bias["XYZ".index(axis)]
-                             for s in rotation_samples) * 0.0175  # Convert to radians
-
-        print(f"Estimated rotation: {degrees(total_rotation):.2f} degrees")
-        print(f"Rotation rate: {degrees(total_rotation) / duration:.2f} deg/s")
-
-    return gyro_bias
-
-
-def temperature_compensation():
-    print("We'll collect data at different temperatures.")
-    temp_ranges = ["Room temperature", "After gentle heating", "After cooling"]
-    temp_data = []
-
-    for temp in temp_ranges:
-        print(f"Prepare the IMU for {temp} readings. Press Enter when ready...")
-        input()
-        samples = collect_samples(20)
-        temp_data.append((temp, samples))
-
-    # Process temperature data (simplified)
-    for temp, samples in temp_data:
-        accel_avg = [sum(axis) / len(samples) for axis in zip(*[s[:3] for s in samples])]
-        gyro_avg = [sum(axis) / len(samples) for axis in zip(*[s[3:] for s in samples])]
-        print(f"{temp} averages:")
-        print(f"Accel: {accel_avg}, Gyro: {gyro_avg}")
-
-    # You would typically fit a curve to this data for temperature compensation
-
+    bgx, bgy, bgz = 0,0,0
+    bax, bay, baz = 0,0,0
+    v_ax, v_ay, v_az, v_gx, v_gy, v_gz = 0,0,0,0,0,0
+    for n in range(2000):
+        bgx += imu.gyro.x
+        bgy += imu.gyro.y
+        bgz += imu.gyro.z
+        bax += imu.accel.x
+        bay += imu.accel.y
+        baz += imu.accel.z -1
+        
+        v_gx += (imu.gyro.x)**2
+        v_gy += (imu.gyro.y)**2
+        v_gz += (imu.gyro.z)**2
+        v_ax += (imu.accel.x)**2
+        v_ay += (imu.accel.y)**2
+        v_az += (imu.accel.z-1)**2
+        
+        
+    
+    return [bax/2000, bay/2000, baz/2000],[bgx/2000, bgy/2000, bgz/2000],[(v_ax - (bax)**2)/2000, (v_ay - (bay)**2)/2000, (v_az - (baz)**2)/2000],[(v_gx - (bgx)**2)/2000, (v_gy - (bgy)**2)/2000, (v_gz - (bgz)**2)/2000]
 
 # Main calibration routine
 def advanced_calibration():
     print("Starting advanced IMU calibration...")
-
+    
     # accel_bias, accel_scale = multi_position_accel_calibration()
     # print(f"Accelerometer bias: {accel_bias}")
     # print(f"Accelerometer scale factors: {accel_scale}")
-
-    # g yro_bias = gyro_calibration_with_rotation()
-    # print(f"Gyroscope bias: {gyro_bias}")
+    
+    a_biases,g_biases, va, vg = gyro_calibration_with_rotation()
+    print(f"Gyroscope std: {vg}")
     # print("Advanced calibration complete!")
-    return [0.07534748306666673, -0.009919429263333359, 0.05217854646666667], [0.984142318001577, 0.9910474226597741,
-                                                                               0.9716522402219719], [0, 0, 0]
+    return a_biases,g_biases, va, vg
+#[0.07534748306666673, -0.009919429263333359, 0.05217854646666667], [0.984142318001577, 0.9910474226597741, 0.9716522402219719], gyro_bias
+
 
 
 class ExtendedKalmanFilter:
@@ -654,13 +634,15 @@ class ExtendedKalmanFilter:
 i2c = I2C(0, sda=Pin(0), scl=Pin(1), freq=400000)
 imu = MPU6050(i2c)
 # Run the calibration
-accel_bias, accel_scale, gyro_bias = advanced_calibration()
+a_biases,g_biases, va, vg = advanced_calibration()
+gyro_bias = g_biases
+accel_bias,accel_scale = [0.07534748306666673, -0.009919429263333359, 0.05217854646666667], [0.984142318001577, 0.9910474226597741, 0.9716522402219719]
 # Initialize EKF
 initial_state = np.array([0, 0, 0])
 initial_P = np.eye(3)
 
-
-R = np.eye(7) * 1
+Q = np.eye(3)
+R = np.eye(3) * 1
 ekf = ExtendedKalmanFilter(initial_state, initial_P, Q, R)
 
 # Main loop
@@ -686,7 +668,7 @@ while True:
     last_time = current_time
 
     B = np.eye(3) * dt
-    Q = np.dot(B.transpose(), B) , gyr
+    Q = np.dot(B.transpose(), B) , np.array(gyro_bias)
     # EKF predict and update steps
     ekf.predict(gyro,dt)
     ekf.update(z, dt)
