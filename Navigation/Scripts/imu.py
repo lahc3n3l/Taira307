@@ -2,6 +2,9 @@ from time import sleep
 from machine import Pin, I2C
 from utime import sleep_ms,ticks_ms
 from math import sqrt, degrees, acos, atan2
+import utime
+import math
+from ulab import numpy as np
 
 
 def default_wait():
@@ -536,18 +539,40 @@ def gyro_calibration_with_rotation():
         input()
         start_time = ticks_ms()
         rotation_samples = collect_samples(20)
-        duration = (ticks_ms() - start_time) / 1000  
+        duration = (ticks_ms() - start_time) / 1000  # in seconds
         input()
         
+        # Calculate total rotation
         total_rotation = sum(s[3 + "XYZ".index(axis)] - gyro_bias["XYZ".index(axis)] 
-                             for s in rotation_samples) * 0.0175 
+                             for s in rotation_samples) * 0.0175  # Convert to radians
         
         print(f"Estimated rotation: {degrees(total_rotation):.2f} degrees")
         print(f"Rotation rate: {degrees(total_rotation) / duration:.2f} deg/s")
     
     return gyro_bias
 
+def temperature_compensation():
+    print("We'll collect data at different temperatures.")
+    temp_ranges = ["Room temperature", "After gentle heating", "After cooling"]
+    temp_data = []
+    
+       
+    for temp in temp_ranges:
+        print(f"Prepare the IMU for {temp} readings. Press Enter when ready...")
+        input()
+        samples = collect_samples(20)
+        temp_data.append((temp, samples))
+    
+    # Process temperature data (simplified)
+    for temp, samples in temp_data:
+        accel_avg = [sum(axis) / len(samples) for axis in zip(*[s[:3] for s in samples])]
+        gyro_avg = [sum(axis) / len(samples) for axis in zip(*[s[3:] for s in samples])]
+        print(f"{temp} averages:")
+        print(f"Accel: {accel_avg}, Gyro: {gyro_avg}")
+    
+    # You would typically fit a curve to this data for temperature compensation
 
+# Main calibration routine
 def advanced_calibration():
     print("Starting advanced IMU calibration...")
     
@@ -555,22 +580,92 @@ def advanced_calibration():
     # print(f"Accelerometer bias: {accel_bias}")
     # print(f"Accelerometer scale factors: {accel_scale}")
     
-    gyro_bias = gyro_calibration_with_rotation()
-    print(f"Gyroscope bias: {gyro_bias}")
+    #g yro_bias = gyro_calibration_with_rotation()
+    # print(f"Gyroscope bias: {gyro_bias}")
+    # print("Advanced calibration complete!")
+    return [0.07534748306666673, -0.009919429263333359, 0.05217854646666667], [0.984142318001577, 0.9910474226597741, 0.9716522402219719], [0,0,0]
+
     
-    print("Advanced calibration complete!")
-    return [0.07534748306666673, -0.009919429263333359, 0.05217854646666667], [0.984142318001577, 0.9910474226597741, 0.9716522402219719], gyro_bias
+    
 
+class ExtendedKalmanFilter:
+    def __init__(self, initial_state, initial_P, Q, R):
+        self.x = np.array(initial_state)
+        self.P = np.array(initial_P)
+        self.Q = np.array(Q)
+        self.R = np.array(R)
+        self.n = len(initial_state)
+        self.m = len(R)
+        self.I = np.eye(self.n)
+        self.g = 9.81  # acceleration due to gravity
 
+    def convert_accel(self, accel_normalized):
+        return [a * self.g for a in accel_normalized]
 
+    def predict(self, dt):
+        # State transition function
+
+        # Compute Jacobian F
+        F = np.eye(self.n)
+        F[0, 4] = dt
+        F[1, 5] = dt
+        F[2, 6] = dt
+        F[3, 7] = dt
+
+        # predict 
+        self.x = np.dot(F, self.x)
+
+        # Update covariance
+        self.P = np.dot(np.dot(F , self.P ), F.transpose()) + self.Q
+
+    def update(self, z, dt):
+        # Convert accelerometer readings from normalized to m/s²
+        z_converted = np.array(self.convert_accel(z[:3]) + list(z[3:]))
+
+        # Compute Jacobian H
+        H = np.zeros((self.m, self.n))
+        H[0, 0] = self.g * math.cos(self.x[0])
+        H[1, 0] = self.g * math.sin(self.x[1]) * math.sin(self.x[0])
+        H[1, 1] = -self.g * math.cos(self.x[1]) * math.cos(self.x[0])
+        H[2, 0] = self.g * math.cos(self.x[1]) * math.sin(self.x[0])
+        H[2, 1] = self.g * math.sin(self.x[1]) * math.cos(self.x[0])
+        H[3, 4] = H[4, 5] = H[5, 6] = 1
+        H[6, 3] = 1
+        H[6, 7] = dt  # Correction for vertical velocity
+
+        # estimate measurment
+        z_hat = np.dot(H,self.x)
+
+        # Compute Kalman gain
+        S = np.dot(np.dot(H , self.P) , H.transpose() )+ self.R
+        S_inv = np.linalg.inv(S)
+        K = np.dot(np.dot(self.P , H.transpose()), S_inv)
+        # Update state
+        y = z_converted - z_hat
+        self.x += np.dot(K , y)
+
+        # Update covariance
+        self.P = np.dot(self.I - np.dot(K , H) , self.P)
+
+    def get_state(self):
+        return self.x
 
 
 i2c = I2C(0, sda=Pin(0), scl=Pin(1), freq=400000)
 imu = MPU6050(i2c)
 # Run the calibration
 accel_bias, accel_scale, gyro_bias = advanced_calibration()
+# Initialize EKF
+initial_state = np.array([0, 0, 0, 0, 0, 0, 0, 0])
+initial_P = np.eye(8) * 5
+Q = np.eye(8) * 100
+R = np.eye(7) * 1
+ekf = ExtendedKalmanFilter(initial_state, initial_P, Q, R)
 
+# Main loop
+last_time = utime.ticks_us()
 while True:
+    # Get sensor data (replace with actual sensor readings)
     ax=round((imu.accel.x - accel_bias[0])*accel_scale[0],2)
     ay=round((imu.accel.y - accel_bias[1])*accel_scale[1],2)
     az=round((imu.accel.z - accel_bias[2])*accel_scale[2],2)
@@ -578,13 +673,31 @@ while True:
     gy=round(imu.gyro.y - gyro_bias[1],2)
     gz=round(imu.gyro.z - gyro_bias[2],2)
     tem=round(imu.temperature,2)
-    
-    print("ax",ax,"\t","ay",ay,"\t","az",az,"\t","gx",gx,"\t","gy",gy,"\t","gz",gz,"\t","Temperature",tem,"        ",end="\n")
-    roll, pitch = get_rotation(ax, ay, az)
-    # Print results
-    print(f"Roll: {roll:.2f}°, Pitch: {pitch:.2f}°")
 
-    sleep(0.2) 
+    accel = [ax, ay, az]
+    gyro = [gx, gy, gz]
+    altitude = 0
+    z = np.array(accel + gyro + [altitude])
+
+    # Compute dt
+    current_time = utime.ticks_us()
+    dt = utime.ticks_diff(current_time, last_time) / 1e6
+    last_time = current_time
+
+    # EKF predict and update steps
+    ekf.predict(dt)
+    ekf.update(z, dt)
+
+    # Get updated state
+    state = ekf.get_state()
+    print(f"ax: {ax} m/s², ay; {ay} m/s², az: {az} m/s²")
+    print(f"Pitch: {math.degrees(state[0]):.2f}°, Roll: {math.degrees(state[1]):.2f}°, Yaw: {math.degrees(state[2]):.2f}°")
+    print(f"Altitude: {state[3]:.2f}m, Vertical Velocity: {state[7]:.2f}m/s")
+
+    utime.sleep_ms(100)  # Adjust as needed
+
+
+
 
 
 
