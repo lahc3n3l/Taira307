@@ -6,18 +6,22 @@ from ulab import numpy as np
 
 # Constants
 MPU6050_ADDR = 0x68
+BMP280_ADDR = 0x76
 # some MPU6050 Registers and their Address
 PWR_MGMT_1 = 0x6B
 CONFIG = 0x1A
 DLPF_CONFIG = 3
-
+#Gyro configuration
 GYRO_CONFIG = 0x1B
 GYRO_XOUT_H = 0x43
 GYRO_FS = 2
-
+#Accelerometer configuration
 ACCEL_CONFIG = 0x1C
 ACCEL_XOUT_H = 0x3B
 ACCEL_FS = 2
+# Barometer BMP280
+PRESS_MSB = 0xF7
+
 # Initialize IMU I2C, 
 i2c = machine.I2C(0, sda=machine.Pin(0), scl=machine.Pin(1), freq=400000)
 
