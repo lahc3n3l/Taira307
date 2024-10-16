@@ -43,7 +43,12 @@ def readIMU():
     gx /= gScale
     gy /= gScale
     gz /= gScale
-
+    
+    # convert to rad/s:
+    gx *= DEG_TO_RAD 
+    gy *= DEG_TO_RAD
+    gz *= DEG_TO_RAD
+    
     # read from Accel
     accelData = i2c.readfrom_mem(MPU6050_ADDR, ACCEL_XOUT_H, 6)
     # Convert the data
