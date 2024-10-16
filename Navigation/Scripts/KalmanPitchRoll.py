@@ -62,15 +62,23 @@ def readIMU():
     return np.array([ax, ay, az]), np.array([gx, gy, gz])
 
 def calibrateIMU(n):
+    print("Satrting calibration, keep the IMU still ....")
     gyroBiases = np.array([0, 0, 0])
+    gyroSecondOrderMoment = np.array([0, 0, 0])
+    
     accelBiases = np.array([0, 0, 0])
+    accelSecondOrderMoment = np.array([0, 0, 0])
     for i in range(n):
         a, g = readIMU()
         a[2] -= 1
         gyroBiases += g
         accelBiases += a
+        
+        gyroSecondOrderMoment  += (DEG_TO_RAD* g)**2
+        accelSecondOrderMoment += a**2
         utime.sleep_ms(1)
-    return accelBiases / n, gyroBiases / n
+    print("Calibration finished")
+    return accelBiases / n, accelSecondOrderMoment - (accelBiases / n)**2 , gyroBiases / n, gyroSecondOrderMoment -  (gyroBiases / n)**2
 
 class KalmanFilter:
     def __init__(self):
