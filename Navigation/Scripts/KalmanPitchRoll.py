@@ -85,13 +85,13 @@ class KalmanFilter:
         self.A = np.eye(3)
         self.H = np.array([[1, 0, 0],[0, 1, 0]])
         self.Q = np.eye(3) * (1)**2
-        self.R = np.eye(2) * (0.5)**2
-        self.P = np.eye(3) * (2)**2
+        self.R = np.eye(2) * (0.2)**2
+        self.P = np.eye(3) * (10)**2
         self.x = np.array([1.4,1.4, 1])#np.zeros(3)
 
     def predict(self, u, dt):
         self.B = np.eye(3)*dt
-        self.Q = np.dot(self.B, self.B.transpose()) * (2 *DEG_TO_RAD)**2
+        self.Q = np.dot(self.B, self.B.transpose()) * (8 *DEG_TO_RAD)**2
         self.x = np.dot(self.A, self.x) + np.dot(self.B, u)
         self.P = np.dot(np.dot(self.A, self.P), self.A.transpose()) + self.Q
 
@@ -105,14 +105,15 @@ class KalmanFilter:
 
 # Main
 configureIMU()
-accelBiases, gyroBiases = calibrateIMU(2000)
+accelBiases,va, gyroBiases, vg = calibrateIMU(2000)
 kf = KalmanFilter()  # 80ms sampling rate
 lastTime = utime.ticks_us()
+print(accelBiases,va, gyroBiases, vg )
 while True:
     ax, ay, az = np.array(readIMU()[0]) - accelBiases
     gx, gy, gz = np.array(readIMU()[1]) - gyroBiases
     
-    gyro = DEG_TO_RAD * np.array([gx, gy, gz])
+    gyro = np.array([gx, gy, gz])
     currentTime = utime.ticks_us()
     dt = (currentTime - lastTime)/1e6
     lastTime = currentTime
@@ -121,5 +122,5 @@ while True:
 
     roll, pitch, yaw = kf.x
 
-    print(f"Roll: {math.degrees(roll):.2f}°, Pitch: {math.degrees(pitch):.2f}°, Yaw: {math.degrees(yaw):.2f}°")
-    utime.sleep_ms(10)
+    print(f"Roll: {math.degrees(roll):.2f}°, Pitch: {math.degrees(pitch):.2f}°")#, Yaw: {math.degrees(yaw):.2f}°")
+    utime.sleep_ms(20)
