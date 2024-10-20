@@ -78,7 +78,13 @@ def calibrateIMU(n):
         accelSecondOrderMoment += a**2
         utime.sleep_ms(1)
     print("Calibration finished")
-    return accelBiases / n, accelSecondOrderMoment - (accelBiases / n)**2 , gyroBiases / n, gyroSecondOrderMoment -  (gyroBiases / n)**2
+
+    accelMean = accelBiases / n
+    gyroMean = gyroBiases / n
+
+    accelVariance = (accelSecondOrderMoment / n) - accelMean ** 2
+    gyroVariance = (gyroSecondOrderMoment / n) - gyroMean ** 2
+    return accelMean, accelVariance, gyroMean, gyroVariance
 
 class KalmanFilter:
     def __init__(self):
