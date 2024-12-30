@@ -8,7 +8,7 @@ accelBiases, accelVariance, gyroBiases, gyroVariance = calibrateIMU(2000)
 kf = KalmanFilter()  # 80ms sampling rate
 
 # Initialize flight controller (adjust pins as needed)
-controller = FlightController(left_servo_pin=15, right_servo_pin=14)
+controller = FlightController(left_servo_pin=11, right_servo_pin=12,pitch_servo_pin=13)
 
 lastTime = utime.ticks_us()
 try:
@@ -38,7 +38,7 @@ try:
         lastTime = currentTime
         
         # Add a small delay to prevent overwhelming the system
-#       print(f"Roll: {roll*180/pi}, Pitch: {pitch*180/pi}")
+        # print(f"Roll: {roll*180/pi}, Pitch: {pitch*180/pi}")
         time.sleep_ms(40)  # 50Hz update rate
         
 except KeyboardInterrupt:
