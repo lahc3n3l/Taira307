@@ -10,6 +10,9 @@
 #include <Servo.h>
 #include <BasicLinearAlgebra.h>
 #include <EnableInterrupt.h>
+#include <QMC5883LCompass.h>
+
+
 
 using namespace BLA;
 
@@ -50,6 +53,9 @@ struct CalibrationData {
     float accel_bias[3];
     float accel_scale[3];
 } calibration;
+
+// Magnetometer object
+QMC5883LCompass compass;
 
 // Create servo objects
 Servo leftAileron;
@@ -197,7 +203,13 @@ void setup() {
     Wire.begin();
     Wire.setClock(400000);
     setupMPU6050();
-    
+
+    // init magneto
+    compass.init();
+
+    // calibrate magneto
+    compass.setCalibrationOffsets(-1633.00, 1254.00, 1620.00);
+    compass.setCalibrationScales(0.92, 1.20, 0.93);
     // Wait for throttle down
     while(pwm_throttle_value > 1050) {
         delay(10);
@@ -372,7 +384,17 @@ void loop() {
     // Read sensors
     float gyro[3], accel[3];
     readMPU6050(gyro, accel);
-    
+    int magx, magy, magz;
+  
+    // Read compass values
+    compass.read();
+
+    // Return XYZ readings
+    magx = compass.getX();
+    magy = compass.getY();
+    magz = compass.getZ();
+    Serial.print("accelX:"); Serial.print(magx); Serial.print(", magY:"); Serial.print(magy[1]); Serial.print(", accelZ:"); Serial.println(magx[2]);
+
     // Kalman filter steps
     kalmanPredict(gyro);
     kalmanUpdate(accel);
