@@ -12,7 +12,16 @@
 #include <EnableInterrupt.h>
 #include <QMC5883LCompass.h>
 
+const byte I2C_SLAVE_ADDR = 0x08;  // Arduino's I2C address
 
+// Structure to hold our data
+struct SensorData {
+    float pitch;
+    float roll;
+    float leftServo;
+    float rightServo;
+    float elevator;
+} data;
 
 using namespace BLA;
 
@@ -171,9 +180,25 @@ void readPWMInputs() {
         previousPulseRead = millis();
     }
 }
+void sendI2CData() {
+    // Update the data structure with current values
+    data.roll = x(0) * RAD_TO_DEG;    // Current roll angle
+    data.pitch = x(1) * RAD_TO_DEG;     // Current pitch angle
+    
+    // Get current servo positions
+    data.leftServo = leftAileron.read();
+    data.rightServo = rightAileron.read();
+    data.elevator = elevator.read();
+    
+    // Send the data when requested by the Pico
+    Wire.write((byte*)&data, sizeof(data));
+}
 
 void setup() {
     Serial.begin(9600);
+
+    Wire.begin(I2C_SLAVE_ADDR);
+    Wire.onRequest(sendI2CData);  // Register request event
     
     // Initialize servos
     leftAileron.attach(LEFT_AILERON_PIN);
@@ -335,7 +360,6 @@ void updateServos() {
     float Pitch = x(1) * RAD_TO_DEG;
     float Yaw = x(2) * RAD_TO_DEG;  
 
-    Serial.print("Roll:"); Serial.println(Roll);;
     // Calculate errors
     float rollError = desiredRoll - Roll;
     float pitchError = desiredPitch - Pitch;
@@ -393,7 +417,6 @@ void loop() {
     magx = compass.getX();
     magy = compass.getY();
     magz = compass.getZ();
-    Serial.print("accelX:"); Serial.print(magx); Serial.print(", magY:"); Serial.print(magy[1]); Serial.print(", accelZ:"); Serial.println(magx[2]);
 
     // Kalman filter steps
     kalmanPredict(gyro);
