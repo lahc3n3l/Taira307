@@ -20,6 +20,7 @@ using namespace BLA;
 #define ROLL_INPUT_PIN 10    // PWM input for roll
 #define PITCH_INPUT_PIN 3    // Changed to pin 3 for interrupt
 #define THROTTLE_INPUT_PIN 12 // PWM input for throttle
+#define LOGGER_TRIGGER_PIN 11    // PWM input for logger trigger
 
 #define FLAP_INPUT_PIN 2     // New interrupt for flaps (CH6)
 
@@ -51,6 +52,7 @@ struct CalibrationData {
     float accel_scale[3];
 } calibration;
 
+
 // Create servo objects
 Servo leftAileron;
 Servo rightAileron;
@@ -63,6 +65,7 @@ unsigned int pwm_throttle_value = 1000; // Default low throttle
 unsigned int pwm_flap_value = 1000;    // Default no flaps
 unsigned long previousPulseRead = 0;    // Timer for pulse readings
 const unsigned long PULSE_READ_INTERVAL = 20; // Read pulses every 20ms
+int switchAValue;   // swith A value for logger activation 
 
 
 // Kalman filter matrices using BasicLinearAlgebra
@@ -99,7 +102,7 @@ float pitchIntegral = 0;
 const float Kp_roll = 1.5;
 const float Ki_roll = 0.0;
 const float Kd_roll = 0.0;
-const float Kp_pitch = 1.5;
+const float Kp_pitch = 0.75;
 const float Ki_pitch = 0.0;
 const float Kd_pitch = 0.0;
 
@@ -163,12 +166,20 @@ void readPWMInputs() {
         }
         
         previousPulseRead = millis();
+
+        // Read Switch A input
+        pulse = pulseIn(LOGGER_TRIGGER_PIN, HIGH, timeout);
+        if (pulse != 0) {
+            switchAValue = pulse;
+        }
+        
+        previousPulseRead = millis();
     }
 }
 
 void setup() {
     Serial.begin(9600);
-    
+    //    
     // Initialize servos
     leftAileron.attach(LEFT_AILERON_PIN);
     rightAileron.attach(RIGHT_AILERON_PIN);
@@ -244,27 +255,25 @@ void readMPU6050(float gyro[3], float accel[3]) {
     int16_t gyrZ = Wire.read() << 8 | Wire.read();
     
     // Convert to float values and apply calibration
-    accel[0] = accX / 8192.0 - 0.1;//- calibration.accel_bias[0]); //* calibration.accel_scale[0];
+    accel[0] = accX / 8192.0+0.015 ;//- calibration.accel_bias[0]); //* calibration.accel_scale[0];
     accel[1] = accY / 8192.0 ;//- calibration.accel_bias[1]); //* calibration.accel_scale[1];
-    accel[2] = accZ / 8192.0 - 0.07;//- calibration.accel_bias[2]); //* calibration.accel_scale[2];
+    accel[2] = accZ / 8192.0 - 0.05;//- calibration.accel_bias[2]); //* calibration.accel_scale[2];
     
-    gyro[0] = gyrX / 65.5 + 6.60; //- calibration.gyro_bias[0];
-    gyro[1] = gyrY / 65.5 + 0.70; //- calibration.gyro_bias[1];
-    gyro[2] = gyrZ / 65.5 - 0.70; //- calibration.gyro_bias[2];
+    gyro[0] = gyrX / 65.5 +0.13+1.6; //- calibration.gyro_bias[0];
+    gyro[1] = gyrY / 65.5 -0.03-0.5; //- calibration.gyro_bias[1];
+    gyro[2] = gyrZ / 65.5 -0.02-0.35; //- calibration.gyro_bias[2];
 
     gyro[0] *= DEG_TO_RAD ;
     gyro[1] *= DEG_TO_RAD ;
     gyro[2] *= DEG_TO_RAD ;
 
     // Debug output
-    // Serial.print("accelX:"); Serial.println(accel[0]);
-     //Serial.print("accelX:"); Serial.print(accel[0]); Serial.print(", accelY:"); Serial.print(accel[1]); Serial.print(", accelZ:"); Serial.println(accel[2]);
+   // Serial.print("accelX:"); Serial.println(accel[0]);
+    //Serial.print("accelX:"); Serial.print(accel[0]); Serial.print(", accelY:"); Serial.print(accel[1]); Serial.print(", accelZ:"); Serial.println(accel[2]);
     //Serial.print("gyrX:"); Serial.print(gyro[0]); Serial.print(", gyroY:"); Serial.print(gyro[1]); Serial.print(", gyroZ:"); Serial.println(gyro[2]);
     //Serial.print("Pitch:"); Serial.print(x[1]);
     // Serial.print(" ServosL/R/E: ");
-    // Serial.print(leftAileronAngle); Serial.print("/");
-    // Serial.print(rightAileronAngle); Serial.print("/");
-    // Serial.println(elevatorAngle);
+    
 }
 
 void kalmanPredict(float gyro[3]) {
@@ -319,15 +328,16 @@ void updateServos() {
         flapDeflection = map(pwm_flap_value, FLAP_THRESHOLD, 2000, 20, MAX_FLAP_DEFLECTION);
     }
     
-    float Roll = -x(0) * RAD_TO_DEG;
+    float Roll = x(0) * RAD_TO_DEG;
     float Pitch = x(1) * RAD_TO_DEG;
     float Yaw = x(2) * RAD_TO_DEG;  
 
-    Serial.print("Roll:"); Serial.println(Roll);;
+   // Serial.print("Roll:"); Serial.println(Roll);
+   //Serial.print("Pitch:"); Serial.println(Pitch);
+   //Serial.print("Yaw:"); Serial.println(Yaw);
     // Calculate errors
     float rollError = desiredRoll - Roll;
     float pitchError = desiredPitch - Pitch;
-    
     // Calculate PID terms for roll
     float rollP = Kp_roll * rollError;
     rollIntegral += Ki_roll * rollError * dt;
@@ -358,6 +368,10 @@ void updateServos() {
     elevatorAngle = constrain(elevatorAngle, 45, 135);
     
     // Write to servos
+    //  Serial.print("leftAileronAngle:"); Serial.println(leftAileronAngle);
+    //  Serial.print("rightAileronAngle:"); Serial.println(rightAileronAngle);
+    //  Serial.print("elevatorAngle:"); Serial.println(elevatorAngle);
+
     leftAileron.write(leftAileronAngle);
     rightAileron.write(rightAileronAngle);
     elevator.write(elevatorAngle);
@@ -368,6 +382,7 @@ void loop() {
     
     // Read PWM inputs
     readPWMInputs();
+
     
     // Read sensors
     float gyro[3], accel[3];
@@ -380,7 +395,11 @@ void loop() {
     // Update servo outputs
     updateServos();
     
+    Serial.print("Switch A:");
+    Serial.print(switchAValue);
+    
     // Maintain loop timing
     while(micros() - loopTimer < 4000);
     loopTimer = micros();
+    
 }
