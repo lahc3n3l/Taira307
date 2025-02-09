@@ -2,10 +2,13 @@ import time, utime
 from math import pi
 from flightController import *
 from KalmanPitchRoll import *
+from dataLogger import *
+
 
 # Blink at startup
 
-StartUpLed = Pin(16, Pin.OUT)  # Built-in LED on Pico is on GPIO 25
+StartUpLed = Pin(25, Pin.OUT)  # Built-in LED on Pico is on GPIO 25
+DataLoggerLed = Pin(16, Pin.OUT)  # Data logger LED on Pico is on Gpio 16
 
 StartUpLed.toggle()
 time.sleep(0.2)
@@ -13,13 +16,19 @@ StartUpLed.toggle()
 time.sleep(0.2)
 StartUpLed.toggle()
 
-
+# Initialize components
 Scom = SerialCommunicator()
 kf = KalmanFilter()
 fController = FlightController()
-
-
 configureIMU()
+logger = DataLogger()
+
+DataLoggerLed.toggle()
+time.sleep(0.2)
+DataLoggerLed.toggle()
+time.sleep(0.2)
+DataLoggerLed.toggle()
+
 accelBiases, accelVariance, gyroBiases, gyroVariance = calibrateIMU(2000)
 
 # Initial target attitude and throttle
@@ -60,6 +69,23 @@ try:
         right_servo_angle, left_servo_angle, pitch_servo_angle = fController.update_control_surfaces(current_roll, current_pitch, dt)
         Scom.update_servo_values(right_servo_angle, left_servo_angle,pitch_servo_angle)
         Scom.send_servo_commands()
+        
+        # Log data
+         # Log data
+        logger.log_data({
+                'timestamp': utime.ticks_ms(),
+                'ax': ax, 'ay': ay, 'az': az,
+                'gx': gx, 'gy': gy, 'gz': gz,
+                'pitch': current_pitch,
+                'roll': current_roll,
+                'yaw': yaw*180/pi,
+                'target_pitch': target_Pitch,
+                'target_roll': target_Roll,
+                'right_servo': right_servo_angle,
+                'left_servo': left_servo_angle,
+                'pitch_servo': pitch_servo_angle
+        })
+        
         # Update timing
         lastTime = currentTime
         
