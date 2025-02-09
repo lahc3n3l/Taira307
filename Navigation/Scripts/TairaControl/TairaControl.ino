@@ -162,13 +162,13 @@ void loop() {
         flapDeflection = map(pwm_flap_value, FLAP_THRESHOLD, 2000, 20, MAX_FLAP_DEFLECTION);
     }
     // Send orientation data
-    String message = String(desiredRoll) + "," + String(desiredPitch) + "," + String(flapDeflection) + "\n";
+    String message = "v," + String(desiredRoll) + "," + String(desiredPitch) + "," + String(flapDeflection) + "\n";
     Serial.print(message);
 
-    delay(3);
     // Receive servo commands
     if (Serial.available()) {
         String received = Serial.readStringUntil('\n');
+
         // Parse the received commands
         int rightServo, lefServo, elevatorServo;
         sscanf(received.c_str(), "%d,%d,%d", &rightServo, &lefServo, &elevatorServo);
