@@ -1,5 +1,5 @@
 from machine import UART, Pin
-import math
+import math,time
 from ulab import numpy as np
 
 DEG_TO_RAD = math.pi/180
@@ -25,41 +25,39 @@ class SerialCommunicator:
             return None
     
     def receive_target_orientation(self):
-        if self.uart.any():
-            try:
-                # Clear buffer if too much data
-                if self.uart.any() > 100:
-                    self.uart.read()  # Flush the buffer
-                    return False
+        command = f"<rqt>\n"
+        self.uart.write(command.encode())
+        time.sleep(0.005)
+        try:
+            response = self.uart.readline()
+            if response:
+                response = response.decode().strip()
                 
-                data = self.uart.readline().decode('utf-8').strip()
-                values = data.split(',')
-                
-                if len(values) == 3:
-                    # Validate each value
-                    new_roll = self.validate_value(values[0])
-                    new_pitch = self.validate_value(values[1])
-                    new_yaw = self.validate_value(values[2])
-                    
-                    # Only update if all values are valid
-                    if all(v is not None for v in [new_roll, new_pitch, new_yaw]):
-                        self.roll = new_roll
-                        self.pitch = new_pitch
-                        self.yaw = new_yaw
+                if response.startswith("<t,") and response.endswith(">"):
+                    #print(response)
+                    _, roll, pitch, flaps = response.split(",")
+                    roll = self.validate_value(roll)
+                    pitch = self.validate_value(pitch)
+                    flaps = self.validate_value(flaps[:-1])
+                    if roll is not None and pitch is not None and flaps is not None:
+                        self.roll = roll
+                        self.pitch = pitch
+                        self.flaps = flaps
                         return True
-            except Exception as e:
-                print("Error reading:", e)
-        return False
+        except:
+            return False
+
     
     def send_servo_commands(self):
         # Send format: "rightServo,leftServo,pitchServo\n"
-        command = f"{self.rightServo},{self.leftServo},{self.pitchServo}\n"
+        command = f"<m,{self.rightServo:03d},{self.leftServo:03d},{self.pitchServo:03d}>\n"
+        print(command)
         self.uart.write(command.encode())
     
     def update_servo_values(self, rightServo, leftServo, pitchServo):
-        self.rightServo = rightServo
-        self.leftServo = leftServo
-        self.pitchServo = pitchServo
+        self.rightServo = int(rightServo)
+        self.leftServo = int(leftServo)
+        self.pitchServo = int(pitchServo)
     
     def get_target_orientation(self):
         return (self.roll, self.pitch, self.flaps)
@@ -147,6 +145,7 @@ class FlightController:
                               min(self.servo_neutral + self.max_deflection,
                                   pitch_servo_angle))
          
-        print(f"Right Servo: {right_servo_angle}, Left Servo: {left_servo_angle}, Pitch Servo: {pitch_servo_angle}")
+        #print(f"Right Servo: {right_servo_angle}, Left Servo: {left_servo_angle}, Pitch Servo: {pitch_servo_angle}")
         return right_servo_angle, left_servo_angle, pitch_servo_angle
+
 

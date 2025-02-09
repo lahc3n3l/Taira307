@@ -58,7 +58,7 @@ try:
         current_pitch = (pitch*180/pi)
         
         # get target Pitch & Roll angles
-
+        Scom.receive_target_orientation()
         target_Roll,target_Pitch, target_flaps = Scom.get_target_orientation()
 
         #print(f"target Roll: {target_Roll}, target Pitch: {target_Pitch}")
@@ -103,3 +103,4 @@ except KeyboardInterrupt:
 
 
     
+
