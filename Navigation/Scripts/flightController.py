@@ -1,6 +1,66 @@
-from machine import Pin, PWM, I2C
-import time
-from math import pi
+from machine import UART, Pin
+import math,time
+from ulab import numpy as np
+
+DEG_TO_RAD = math.pi/180
+
+class SerialCommunicator:
+    def __init__(self, uart_id=0, baud_rate=9600, tx_pin=0, rx_pin=1):
+        self.uart = UART(uart_id, baudrate=baud_rate)
+        self.roll = 0
+        self.pitch = 0
+        self.flaps = 0
+        self.rightServo = 0
+        self.leftServo = 0
+        self.pitchServo = 0
+    
+    def validate_value(self, value, min_val=-50, max_val=50):
+        """Validate that a value is within expected range"""
+        try:
+            val = float(value)
+            if val < min_val or val > max_val:
+                return None
+            return val
+        except ValueError:
+            return None
+    
+    def receive_target_orientation(self):
+        command = f"<rqt>\n"
+        self.uart.write(command.encode())
+        time.sleep(0.005)
+        try:
+            response = self.uart.readline()
+            if response:
+                response = response.decode().strip()
+                
+                if response.startswith("<t,") and response.endswith(">"):
+                    #print(response)
+                    _, roll, pitch, flaps = response.split(",")
+                    roll = self.validate_value(roll)
+                    pitch = self.validate_value(pitch)
+                    flaps = self.validate_value(flaps[:-1])
+                    if roll is not None and pitch is not None and flaps is not None:
+                        self.roll = roll
+                        self.pitch = pitch
+                        self.flaps = flaps
+                        return True
+        except:
+            return False
+
+    
+    def send_servo_commands(self):
+        # Send format: "rightServo,leftServo,pitchServo\n"
+        command = f"<m,{self.rightServo:03d},{self.leftServo:03d},{self.pitchServo:03d}>\n"
+        #print(command)
+        self.uart.write(command.encode())
+    
+    def update_servo_values(self, rightServo, leftServo, pitchServo):
+        self.rightServo = int(rightServo)
+        self.leftServo = int(leftServo)
+        self.pitchServo = int(pitchServo)
+    
+    def get_target_orientation(self):
+        return (self.roll, self.pitch, self.flaps)
 
 
 class PIDController:
@@ -27,32 +87,11 @@ class PIDController:
         
         return p_term + i_term + d_term
 
-class ServoController:
-    def __init__(self, pin, min_duty=2000, max_duty=7800):
-        self.servo = PWM(Pin(pin))
-        self.servo.freq(50)
-        self.min_duty = min_duty
-        self.max_duty = max_duty
-        self.current_angle = 90  # Track current angle
-        
-    def set_angle(self, target_angle):
-        # Smooth the movement
-        target_angle = max(0, min(180, target_angle))
-        self.current_angle += (target_angle - self.current_angle) 
-        
-        # Convert to duty cycle
-        duty = int(self.min_duty + (self.max_duty - self.min_duty) * self.current_angle / 180)
-        self.servo.duty_u16(duty)
-
 class FlightController:
-    def __init__(self, left_servo_pin, right_servo_pin, pitch_servo_pin):
-        # Initialize servos
-        self.left_servo = ServoController(left_servo_pin)
-        self.right_servo = ServoController(right_servo_pin)
-        self.pitch_servo = ServoController(pitch_servo_pin)
+    def __init__(self):
         
         # Initialize PID controllers for roll and pitch
-        self.roll_pid = PIDController(kp=0.5, ki=0.0, kd=0.0)
+        self.roll_pid = PIDController(kp=1.0, ki=0.0, kd=0.0)
         self.pitch_pid = PIDController(kp=1.0, ki=0.0, kd=0.0)
         
         # Target angles (degrees)
@@ -64,12 +103,12 @@ class FlightController:
         self.pitch_trim = 0
         
         # Base servo position (90 degrees is neutral)
-        self.servo_neutral = 90
+        self.servo_neutral = 90 
         
         # Maximum deflection from neutral (degrees)
-        self.max_deflection = 20
+        self.max_deflection = 40
         
-    def update_control_surfaces(self, current_roll, current_pitch, dt):
+    def update_control_surfaces(self, current_roll, current_pitch,flaps_angle, dt):
         # Calculate errors (in degrees)
         roll_error = self.target_roll - current_roll
         pitch_error = self.target_pitch - current_pitch
@@ -81,11 +120,11 @@ class FlightController:
         # Calculate servo angles
         # For roll: servos move in opposite directions
         # Pitch servo handles pitch independently
-        left_servo_angle = (self.servo_neutral - 
+        left_servo_angle = (self.servo_neutral+ flaps_angle - 
                           roll_correction + 
                           self.roll_trim)
         
-        right_servo_angle = (self.servo_neutral + 
+        right_servo_angle = (self.servo_neutral - flaps_angle - 
                            roll_correction - 
                            self.roll_trim)
         
@@ -94,20 +133,20 @@ class FlightController:
                            self.pitch_trim)
         
         # Constrain servo angles
-        left_servo_angle = max(self.servo_neutral - self.max_deflection,
-                             min(self.servo_neutral + self.max_deflection,
-                                 left_servo_angle))
+        left_servo_angle = max(self.servo_neutral - self.max_deflection-15,
+                             min(self.servo_neutral + self.max_deflection+15,
+                                 left_servo_angle))  
         
-        right_servo_angle = max(self.servo_neutral - self.max_deflection,
-                              min(self.servo_neutral + self.max_deflection,
-                                  right_servo_angle))
+        right_servo_angle = max(self.servo_neutral - self.max_deflection-15,
+                              min(self.servo_neutral + self.max_deflection+15
+                                  ,
+                                  right_servo_angle)) -20
         
         pitch_servo_angle = max(self.servo_neutral - self.max_deflection,
                               min(self.servo_neutral + self.max_deflection,
                                   pitch_servo_angle))
-        
-        # Update servos
-        self.left_servo.set_angle(left_servo_angle)
-        self.right_servo.set_angle(right_servo_angle)
-        self.pitch_servo.set_angle(pitch_servo_angle)
-        print(f"Right Servo: {right_servo_angle}, Left Servo: {left_servo_angle}, Pitch Servo: {pitch_servo_angle}")
+         
+        #print(f"Right Servo: {right_servo_angle}, Left Servo: {left_servo_angle}, Pitch Servo: {pitch_servo_angle}")
+        return right_servo_angle, left_servo_angle, pitch_servo_angle
+
+

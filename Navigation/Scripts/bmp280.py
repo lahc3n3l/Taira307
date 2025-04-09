@@ -92,9 +92,8 @@ def main():
         temperature = bmp.read_temperature()
         pressure = bmp.read_pressure()
         altitude = bmp.read_altitude()
-        if (altitude<500):
-            print(f"altitude:{altitude:.2f}")
-        #print(f"Temperature: {temperature:.2f} °C, Pressure: {pressure/1000:.2f} khPa, Altitude: {altitude:.2f} m")
+        
+        print(f"Temperature: {temperature:.2f} °C, Pressure: {pressure/1000:.2f} khPa, Altitude: {altitude:.2f} m")
 
         time.sleep(0.08)
 
