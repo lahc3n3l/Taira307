@@ -51,7 +51,7 @@ class SerialCommunicator:
     def send_servo_commands(self):
         # Send format: "rightServo,leftServo,pitchServo\n"
         command = f"<m,{self.rightServo:03d},{self.leftServo:03d},{self.pitchServo:03d}>\n"
-        print(command)
+        #print(command)
         self.uart.write(command.encode())
     
     def update_servo_values(self, rightServo, leftServo, pitchServo):
@@ -91,7 +91,7 @@ class FlightController:
     def __init__(self):
         
         # Initialize PID controllers for roll and pitch
-        self.roll_pid = PIDController(kp=0.5, ki=0.0, kd=0.0)
+        self.roll_pid = PIDController(kp=1.0, ki=0.0, kd=0.0)
         self.pitch_pid = PIDController(kp=1.0, ki=0.0, kd=0.0)
         
         # Target angles (degrees)
@@ -103,12 +103,12 @@ class FlightController:
         self.pitch_trim = 0
         
         # Base servo position (90 degrees is neutral)
-        self.servo_neutral = 90
+        self.servo_neutral = 90 
         
         # Maximum deflection from neutral (degrees)
         self.max_deflection = 40
         
-    def update_control_surfaces(self, current_roll, current_pitch, dt):
+    def update_control_surfaces(self, current_roll, current_pitch,flaps_angle, dt):
         # Calculate errors (in degrees)
         roll_error = self.target_roll - current_roll
         pitch_error = self.target_pitch - current_pitch
@@ -120,11 +120,11 @@ class FlightController:
         # Calculate servo angles
         # For roll: servos move in opposite directions
         # Pitch servo handles pitch independently
-        left_servo_angle = (self.servo_neutral - 
+        left_servo_angle = (self.servo_neutral+ flaps_angle - 
                           roll_correction + 
                           self.roll_trim)
         
-        right_servo_angle = (self.servo_neutral + 
+        right_servo_angle = (self.servo_neutral - flaps_angle - 
                            roll_correction - 
                            self.roll_trim)
         
@@ -133,13 +133,14 @@ class FlightController:
                            self.pitch_trim)
         
         # Constrain servo angles
-        left_servo_angle = max(self.servo_neutral - self.max_deflection,
-                             min(self.servo_neutral + self.max_deflection,
-                                 left_servo_angle))
+        left_servo_angle = max(self.servo_neutral - self.max_deflection-15,
+                             min(self.servo_neutral + self.max_deflection+15,
+                                 left_servo_angle))  
         
-        right_servo_angle = max(self.servo_neutral - self.max_deflection,
-                              min(self.servo_neutral + self.max_deflection,
-                                  right_servo_angle))
+        right_servo_angle = max(self.servo_neutral - self.max_deflection-15,
+                              min(self.servo_neutral + self.max_deflection+15
+                                  ,
+                                  right_servo_angle)) -20
         
         pitch_servo_angle = max(self.servo_neutral - self.max_deflection,
                               min(self.servo_neutral + self.max_deflection,
