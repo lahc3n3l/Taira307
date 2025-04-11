@@ -21,7 +21,17 @@ private:
     void parseSentence(const String& sentence);
 };
 
-struct GpsData {
+class GpsData {
+public:
+    float getLongitude() const { return lng; }
+    float getLatitude() const { return lat; }
+    float getAltitude() const { return alt; }
+    float getGroundSpeed() const { return groundSpeed; }
+    float getCourse() const { return course; }
+    float getHdop() const { return hdop; }
+public:
+    GpsData() = default;
+    private:
     float lng=0.0; // longitude (°)
     float lat=0.0; // latitude  (°)
     float alt=0.0;  // altitude (m)
