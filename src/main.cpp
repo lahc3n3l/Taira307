@@ -12,6 +12,9 @@
 HardwareSerial gpsSerial(2); // UART2  
 SFE_UBLOX_GNSS myGNSS;
 
+// IMU6050 pins
+#define IMU_SDA 21 // ESP32 SDA pin
+#define IMU_SCL 22 // ESP32 SCL pin
 
 void setup() {
   Serial.begin(115200); // USB serial for debug
