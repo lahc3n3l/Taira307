@@ -56,11 +56,6 @@ void MPU6050::readGyro(float &gx, float &gy, float &gz) {
     gz = ((z / _gyro_scale) - _gyro_offsets[2]) * deg_to_rad;
 }
 
-void MPU6050::readAll(int16_t &ax, int16_t &ay, int16_t &az, int16_t &gx, int16_t &gy, int16_t &gz) {
-    readGyro(gx, gy, gz);
-    readAccel(ax, ay, az); // Read accelerometer data
-
-}
 
 void MPU6050::writeRegister(uint8_t reg, uint8_t value) {
     Wire.beginTransmission(_address);
