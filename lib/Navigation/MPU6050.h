@@ -19,6 +19,8 @@ public:
 
     void readAccel(float &ax, float &ay, float &az);  // m/s²
     void readGyro(float &gx, float &gy, float &gz);   // rad/s
+    void calibrateAccel();
+    void calibrateGyro();
 
 private:
     uint8_t _address;
@@ -29,6 +31,8 @@ private:
     float _accel_offsets[3] = {0.0f, 0.0f, 0.0f};
     float _gyro_offsets[3] = {0.0f, 0.0f, 0.0f};
 
+    void readRawAccel(float &ax, float &ay, float &az);  // m/s²
+    void readRawGyro(float &gx, float &gy, float &gz);   // rad/s
     void writeRegister(uint8_t reg, uint8_t value);
     void readRegisters(uint8_t reg, uint8_t *buffer, uint8_t length);
 };

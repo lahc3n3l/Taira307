@@ -29,7 +29,11 @@ void setup() {
   Serial.begin(115200);
   Wire.begin();
 
-  imu.init(2, 250);  // 2g accel, 250 deg/s gyro
+  imu.init(2, 250);  // 2g accel, 250 deg/s gyro*
+  Serial.println("Calibrating accelerometer...");
+  imu.calibrateAccel(); // Calibrate accelerometer
+  Serial.println("Calibrating gyroscope...");
+  imu.calibrateGyro(); // Calibrate gyroscope
   delay(100);
   #endif
 
@@ -79,19 +83,20 @@ void loop() {
 
   float ax, ay, az;
   float gx, gy, gz;
+  
   imu.readAccel(ax, ay, az); // Read accelerometer data
   imu.readGyro(gx, gy, gz); // Read gyroscope data
-  Serial.print("Accelerometer: \n");
-  Serial.print("ax: "); Serial.print(ax);Serial.print("\n");
-  Serial.print(" ay: "); Serial.print(ay); Serial.print("\n");
-  Serial.print(" az: "); Serial.println(az); Serial.print("\n");
-  Serial.println("----------------------------");
+  // Serial.print("Accelerometer: \n");
+  Serial.print("ax:"); Serial.print(ax);Serial.print("\n");
+  Serial.print("ay:"); Serial.print(ay); Serial.print("\n");
+  Serial.print("az:"); Serial.println(az); //Serial.print("\n");
+  // Serial.println("----------------------------");
 
-  Serial.print("Gyroscope: ");
-  Serial.print("gX: "); Serial.print(gx);Serial.print("\n");
-  Serial.print(" gY: "); Serial.print(gy); Serial.print("\n");
-  Serial.print(" gZ: "); Serial.println(gz); Serial.print("\n");
-  delay(1000); // Delay for readability
+  // Serial.print("Gyroscope: \n");
+  Serial.print("gX:"); Serial.print(gx);Serial.print("\n");
+  Serial.print("gY:"); Serial.print(gy); Serial.print("\n");
+  Serial.print("gZ:"); Serial.println(gz); Serial.print("\n");
+  delay(100); // Delay for readability
 
   #endif
 
