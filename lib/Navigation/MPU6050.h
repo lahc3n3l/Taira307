@@ -15,7 +15,6 @@ class MPU6050 {
 public:
     MPU6050(uint8_t address = MPU6050_ADDR);
 
-    void begin();
     void init(uint8_t accel_scale = 2, uint16_t gyro_scale = 250);
 
     void readAccel(float &ax, float &ay, float &az);  // m/s²

@@ -31,7 +31,6 @@ void setup() {
 
   imu.init(2, 250);  // 2g accel, 250 deg/s gyro
   delay(100);
-  imu.begin(); // Initialize IMU6050 with I2C pins
   #endif
 
   #ifdef GPS_TEST
