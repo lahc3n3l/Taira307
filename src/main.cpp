@@ -4,6 +4,7 @@
 #include <Wire.h>
 // include IMU library
 #include <MPU6050.h>
+#include <ekf.h>
 MPU6050 imu;
 
 #define IMU_TEST
@@ -16,6 +17,7 @@ MPU6050 imu;
 #define GPS_BAUD 115200 // GPS baud rate
 HardwareSerial gpsSerial(2); // UART2  
 SFE_UBLOX_GNSS myGNSS;
+EKF ekf;
 
 // IMU6050 pins
 #define IMU_SDA 21 // ESP32 SDA pin
@@ -34,6 +36,11 @@ void setup() {
   imu.calibrateAccel(); // Calibrate accelerometer
   Serial.println("Calibrating gyroscope...");
   imu.calibrateGyro(); // Calibrate gyroscope
+  float ax, ay, az;
+  imu.readAccel(ax, ay, az); // Read accelerometer data
+  ekf.initializeFromAccel({ax, ay, az}); // Initialize EKF with accelerometer data 
+
+
   delay(100);
   #endif
 
@@ -83,21 +90,32 @@ void loop() {
 
   float ax, ay, az;
   float gx, gy, gz;
+  float rad_to_deg = 57.2957795131; // Conversion factor from radians to degrees 
   
   imu.readAccel(ax, ay, az); // Read accelerometer data
   imu.readGyro(gx, gy, gz); // Read gyroscope data
   // Serial.print("Accelerometer: \n");
-  Serial.print("ax:"); Serial.print(ax);Serial.print("\n");
-  Serial.print("ay:"); Serial.print(ay); Serial.print("\n");
-  Serial.print("az:"); Serial.println(az); //Serial.print("\n");
+  // Serial.print("ax:"); Serial.print(ax);Serial.print("\n");
+  // Serial.print("ay:"); Serial.print(ay); Serial.print("\n");
+  // Serial.print("az:"); Serial.println(az); //Serial.print("\n");
   // Serial.println("----------------------------");
 
   // Serial.print("Gyroscope: \n");
-  Serial.print("gX:"); Serial.print(gx);Serial.print("\n");
+ /* Serial.print("gX:"); Serial.print(gx);Serial.print("\n");
   Serial.print("gY:"); Serial.print(gy); Serial.print("\n");
   Serial.print("gZ:"); Serial.println(gz); Serial.print("\n");
   delay(100); // Delay for readability
+  */
 
+  // Serial.println("----------------------------");
+  ekf.predict({gx, gy, gz}, 0.01); // Predict state with gyroscope data
+  ekf.update({ax, ay, az}); // Update state with accelerometer data
+  BLA::Matrix<3, 1> attitude = ekf.getAttitude(); // Get attitude from EKF
+  float roll = attitude(0) * rad_to_deg; // Roll
+  float pitch = attitude(1) * rad_to_deg; // Pitch
+  Serial.print("Roll:"); Serial.print(roll); Serial.print("\n");
+  Serial.print("Pitch:"); Serial.print(pitch); Serial.print("\n");
+  delay(10); // Delay for readability
   #endif
 
   #ifdef GPS_TEST
