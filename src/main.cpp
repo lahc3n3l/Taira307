@@ -33,7 +33,14 @@ void setup() {
   delay(1000);
   // begin the I2C communication
   Wire.begin();
-  }
+
+  // Initialize the IMU
+  Serial.println("Initializing IMU...");
+  imu.init(2, 250); // 2g accelerometer, 250°/s gyroscope
+  imu.calibrateAccel(); // Calibrate accelerometer
+  imu.calibrateGyro(); // Calibrate gyroscope
+  Serial.println("IMU initialized!");
+  delay(1000);
   // ---------------- GPS Module Setup ----------------
   Serial.println("Initializing GPS module...");
   // Begin UART communication with GPS
