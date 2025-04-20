@@ -55,7 +55,7 @@ void loop() {
   // define accelerometer and gyroscope variables
   float ax, ay, az;
   float gx, gy, gz;
-  BLA::Matrix<3> eulerAngles = {0.0f, 0.0f, 0.0f}; // Initialize euler angles
+  float roll, pitch, yaw =0.0f; // Initialize euler angles
   // read the IMU data
   imu.readAccel(ax, ay, az); // Read accelerometer data
   imu.readGyro(gx, gy, gz); // Read gyroscope data
@@ -71,13 +71,14 @@ void loop() {
 
   
   //perform kalman filter prediction and update
-  kf.predict(gyro, 0.01f); // Predict next state
+  kf.predict(gyro, dt); // Predict next state
   kf.update(accel); // Update Kalman filter with
 
   // Get Euler angles in degrees
-  eulerAngles = kf.getEulerAnglesDeg(); 
-  
+  kf.getEulerAnglesDeg(roll, pitch, yaw);
+
   delay(10);
+
 } // End of loop function
 
 

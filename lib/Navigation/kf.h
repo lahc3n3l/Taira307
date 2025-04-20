@@ -8,7 +8,7 @@ public:
 
     void predict(const BLA::Matrix<3>& u, float dt);
     void update(const BLA::Matrix<3>& accel);
-    BLA::Matrix<3> getEulerAnglesDeg() const;
+    void getEulerAnglesDeg(float &roll, float &pitch, float &yaw) const;
 
 private:
     BLA::Matrix<3,3> A, B, Q, P;
