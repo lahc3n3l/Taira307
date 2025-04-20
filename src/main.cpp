@@ -70,7 +70,7 @@ void loop() {
 
   unsigned long currentTime = millis();
   float dt = (currentTime - lastTime) / 1000.0f;
-  lastTime = currentTime;
+  
 
 
 
@@ -116,6 +116,7 @@ void loop() {
   }
   
   delay(10);
+  lastTime = currentTime;
 
 } // End of loop function
 
