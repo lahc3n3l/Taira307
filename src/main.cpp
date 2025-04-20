@@ -47,7 +47,9 @@ float currentRoll = 0.0f;
 float currentPitch = 0.0f;
 float flapsAngle = 0.0f; 
 
-
+float right_servo_angle = 0.0f;
+float left_servo_angle = 0.0f;
+float pitch_servo_angle = 0.0f;
 
 using namespace BLA;
 
@@ -180,9 +182,12 @@ void loop() {
   //
   // GET ROLL AND PITCH FLAPS COMMANDS
   //
+  currentRoll = roll; // Get roll from Kalman filter
+  currentPitch = pitch; // Get pitch from Kalman filter
+  flapsAngle = 0.0f; 
 
-    // Update commands from receiver
-    commandReader.update();
+  // Update commands from receiver
+  commandReader.update();
   
     // Get the roll, pitch, and flaps commands
     float rollCommand = commandReader.getRollCommand();
@@ -197,9 +202,6 @@ void loop() {
       flightController.setTargetPitch(pitchCommand);
     } 
   
-    float right_servo_angle = 0.0f;
-    float left_servo_angle = 0.0f;
-    float pitch_servo_angle = 0.0f;
   
     flightController.updateControlSurfaces(
       currentRoll, 
