@@ -63,7 +63,7 @@ void setup() {
 
   // 
   // IMU SETUP
-  //
+  //    
 
   Serial.println("Initializing IMU...");
   imu.init(2, 250); // 2g accelerometer, 250°/s gyroscope
@@ -104,7 +104,7 @@ void setup() {
   commandReader.setDeadband(2.0f);          // Deadband to prevent jitter
 
   servoController.begin(); // Initialize servos
-  servoController.setMaxDeflection(40.0f);
+  servoController.setMaxDeflection(60.0f);
   servoController.setLeftTrim(0.0f);
   servoController.setRightTrim(0.0f); 
   servoController.setPitchTrim(0.0f);
@@ -118,8 +118,8 @@ void setup() {
 
   // Initialize flight controller
   Serial.println("Initializing flight controller...");
-  flightController.setRollPID(1.2f, 0.0f, 0.05f);
-  flightController.setPitchPID(1.2f, 0.0f, 0.02f);
+  flightController.setRollPID(1.2f, 0.0f, 0.0f);
+  flightController.setPitchPID(1.2f, 0.0f, 0.0f);
   Serial.println("Flight Controller Ready");
   
   // Initialize timing

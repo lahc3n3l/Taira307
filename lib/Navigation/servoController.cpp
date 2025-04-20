@@ -11,7 +11,7 @@ ServoController::ServoController(uint8_t leftPin, uint8_t rightPin, uint8_t pitc
     leftTrim = 0.0f;           // No trim by default
     rightTrim = 0.0f;          // No trim by default
     pitchTrim = 0.0f;          // No trim by default
-    maxDeflection = 40.0f;     // 40 degrees max deflection
+    maxDeflection = 60.0f;     // 40 degrees max deflection
     
     // Default positions (neutral)
     leftPosition = servoNeutral;
@@ -38,9 +38,9 @@ bool ServoController::begin() {
     rightServo.setPeriodHertz(50);  // Standard 50Hz PWM for servos
     pitchServo.setPeriodHertz(50);  // Standard 50Hz PWM for servos
 
-    leftServo.attach(leftServoPin, 1000, 2000);
-    rightServo.attach(rightServoPin, 1000, 2000);
-    pitchServo.attach(pitchServoPin, 1000, 2000);
+    leftServo.attach(leftServoPin, 500, 2500);  // Attach left servo
+    rightServo.attach(rightServoPin, 500, 2500);  // Attach left servo);
+    pitchServo.attach(pitchServoPin, 500, 2500);  // Attach left servo);
     
     
     // Set servos to neutral position
