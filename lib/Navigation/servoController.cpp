@@ -26,33 +26,22 @@ ServoController::ServoController(uint8_t leftPin, uint8_t rightPin, uint8_t pitc
 
 bool ServoController::begin() {
     // Initialize ESP32's servo library
+    
     ESP32PWM::allocateTimer(0);  // Use first timer for servos
     ESP32PWM::allocateTimer(1);  // Use second timer for servos
     ESP32PWM::allocateTimer(2);  // Use third timer for servos
+    ESP32PWM::allocateTimer(3);  // Use fourth timer for servos
     
     // Configure servos with standard pulse widths (adjust if needed for your servos)
     // Arguments are: min pulse width, max pulse width, default position
     leftServo.setPeriodHertz(50);   // Standard 50Hz PWM for servos
     rightServo.setPeriodHertz(50);  // Standard 50Hz PWM for servos
     pitchServo.setPeriodHertz(50);  // Standard 50Hz PWM for servos
+
+    leftServo.attach(leftServoPin, 1000, 2000);
+    rightServo.attach(rightServoPin, 1000, 2000);
+    pitchServo.attach(pitchServoPin, 1000, 2000);
     
-    // Attach servos to pins and configure pulse widths
-    // Min pulse width = 1000us, max = 2000us (standard servo values)
-    // These values can be adjusted for your specific servos
-    if (!leftServo.attach(leftServoPin, 1000, 2000)) {
-        return false;  // Failed to attach left servo
-    }
-    
-    if (!rightServo.attach(rightServoPin, 1000, 2000)) {
-        leftServo.detach();  // Detach previously attached servo
-        return false;  // Failed to attach right servo
-    }
-    
-    if (!pitchServo.attach(pitchServoPin, 1000, 2000)) {
-        leftServo.detach();   // Detach previously attached servos
-        rightServo.detach();
-        return false;  // Failed to attach pitch servo
-    }
     
     // Set servos to neutral position
     setToNeutral();
@@ -132,10 +121,10 @@ void ServoController::updateServos(float rightAngle, float leftAngle, float pitc
     pitchAngle += pitchTrim;
     
     // Apply limits to ensure servos stay within safe range
-    float leftMin = servoNeutral - maxDeflection - 15.0f;   // Extended range for left servo
-    float leftMax = servoNeutral + maxDeflection + 15.0f;   // Extended range for left servo
-    float rightMin = servoNeutral - maxDeflection - 15.0f;  // Extended range for right servo
-    float rightMax = servoNeutral + maxDeflection + 15.0f;  // Extended range for right servo
+    float leftMin = servoNeutral - maxDeflection;   // Extended range for left servo
+    float leftMax = servoNeutral + maxDeflection ;   // Extended range for left servo
+    float rightMin = servoNeutral - maxDeflection;  // Extended range for right servo
+    float rightMax = servoNeutral + maxDeflection;  // Extended range for right servo
     float pitchMin = servoNeutral - maxDeflection;          // Standard range for pitch servo
     float pitchMax = servoNeutral + maxDeflection;          // Standard range for pitch servo
     
@@ -153,6 +142,14 @@ void ServoController::updateServos(float rightAngle, float leftAngle, float pitc
     leftPosition = leftAngle;
     rightPosition = rightAngle;
     pitchPosition = pitchAngle;
+    // print for debugging
+    Serial.print("Left Servo Angle: ");
+    Serial.print(leftAngle);
+    Serial.print(" Right Servo Angle: ");
+    Serial.print(rightAngle);
+    Serial.print(" Pitch Servo Angle: ");
+    Serial.println(pitchAngle);
+
     
     // Write angles to servos
     leftServo.write(round(leftAngle));

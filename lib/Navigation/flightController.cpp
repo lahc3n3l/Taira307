@@ -46,19 +46,19 @@ void FlightController::updateControlSurfaces(
     
     right_servo_angle = (servo_neutral - flaps_angle - 
                        roll_correction - 
-                       roll_trim) - 20.0f;  // Notice the -20 offset from original code
+                       roll_trim);
     
     pitch_servo_angle = (servo_neutral + 
                        pitch_correction + 
                        pitch_trim);
     
     // Constrain servo angles
-    left_servo_angle = max(servo_neutral - max_deflection - 15.0f,
-                          min(servo_neutral + max_deflection + 15.0f,
+    left_servo_angle = max(servo_neutral - max_deflection ,
+                          min(servo_neutral + max_deflection ,
                               left_servo_angle));
     
-    right_servo_angle = max(servo_neutral - max_deflection - 15.0f,
-                           min(servo_neutral + max_deflection + 15.0f,
+    right_servo_angle = max(servo_neutral - max_deflection ,
+                           min(servo_neutral + max_deflection ,
                                right_servo_angle));
     
     pitch_servo_angle = max(servo_neutral - max_deflection,
