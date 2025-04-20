@@ -1,156 +1,128 @@
 #include <Arduino.h>
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
-// include wire.h for I2C communication
 #include <Wire.h>
-// include IMU library
 #include <MPU6050.h>
 #include <ekf.h>
-MPU6050 imu;
+#include "CommandReader.h"
 
-#define IMU_TEST
-//#define GPS_TEST
-// Uncomment the above line to enable GPS test
 
-// UART pins for GY87
-#define GPS_RX_PIN 16  // ESP32 RX <- GPS TX
-#define GPS_TX_PIN 17  // ESP32 TX -> GPS RX
-#define GPS_BAUD 115200 // GPS baud rate
-HardwareSerial gpsSerial(2); // UART2  
-SFE_UBLOX_GNSS myGNSS;
-EKF ekf;
 
-// IMU6050 pins
-#define IMU_SDA 21 // ESP32 SDA pin
-#define IMU_SCL 22 // ESP32 SCL pin
+// Define receiver pins (using ESP32 GPIO pins with interrupt support)
+#define ROLL_PIN 2  // ESP32 GPIO 2
+#define PITCH_PIN 4 // ESP32 GPIO 4
+#define FLAPS_PIN 5 // ESP32 GPIO 5
+
+// Create CommandReader instance
+CommandReader commandReader(ROLL_PIN, PITCH_PIN, FLAPS_PIN);
+
+
+
+// Debug flag to enable/disable detailed debug output
+bool enableDebug = true;
+
+// Flag for calibration mode
+bool calibrationMode = false;
+
+// Timing variables
+unsigned long lastDisplayTime = 0;
+const unsigned long DISPLAY_INTERVAL = 500; // 500ms = 2Hz display rate
 
 void setup() {
-
-  Serial.begin(115200); // USB serial for debug
-  delay(1000);
-  #ifdef IMU_TEST
+  // Initialize serial communication
   Serial.begin(115200);
-  Wire.begin();
-
-  imu.init(2, 250);  // 2g accel, 250 deg/s gyro*
-  Serial.println("Calibrating accelerometer...");
-  imu.calibrateAccel(); // Calibrate accelerometer
-  Serial.println("Calibrating gyroscope...");
-  imu.calibrateGyro(); // Calibrate gyroscope
-  float ax, ay, az;
-  imu.readAccel(ax, ay, az); // Read accelerometer data
-  ekf.initializeFromAccel({ax, ay, az}); // Initialize EKF with accelerometer data 
-
-
-  delay(100);
-  #endif
-
-  #ifdef GPS_TEST
-  Serial.println("GY87 Sensor Test");
+  Serial.println("Flight Controller Starting...");
   
-  Wire.begin();  // Initialize I2C
-
-  // ---------------- GPS Module Setup ----------------
-
-    Serial.println("Initializing GPS module...");
-    // Begin UART communication with GPS
-    gpsSerial.begin(115200, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-
-    if (myGNSS.begin(gpsSerial)) {
-      Serial.println("GNSS module connected!");
-    } else {
-      Serial.println("Failed to connect to GNSS module.");
-    }
-
-    // Optional tuning
-    myGNSS.setNavigationFrequency(1); // 1 Hz updates
-    myGNSS.setAutoPVT(true); // Enable automatic PVT messages
-
-    Serial.println("Initializing GPS module...");
-    // Begin UART communication with GPS
+  // Allow some time for devices to initialize
+  delay(1000);
   
-    if (myGNSS.begin(gpsSerial)) {
-      Serial.println("GNSS module connected!");
-    } else {
-      Serial.println("Failed to connect to GNSS module.");
-    }
+  // Initialize the command reader (RC receiver interface)
+  commandReader.begin();
   
-    // Optional tuning
-    myGNSS.setNavigationFrequency(1); // 1 Hz updates
-    myGNSS.setAutoPVT(true); // Enable automatic PVT messages
-
-    #endif
+  // Configure command reader parameters
+  commandReader.setRollMaxDegrees(30.0f);   // Maximum roll angle in degrees
+  commandReader.setPitchMaxDegrees(30.0f);  // Maximum pitch angle in degrees
+  commandReader.setFlapsMaxDegrees(45.0f);  // Maximum flaps angle in degrees
+  commandReader.setDeadband(2.0f);          // Deadband to prevent jitter
   
-    // ---------- End GPS Module Setup ----------
-  }
+  
+  Serial.println("Flight Controller Ready");
+  Serial.println("Send 'c' to enter calibration mode");
+}
 
 void loop() {
-
-  // ---------------- GY87 Sensor Test ----------------
-  #ifdef IMU_TEST
-
-  float ax, ay, az;
-  float gx, gy, gz;
-  float rad_to_deg = 57.2957795131; // Conversion factor from radians to degrees 
-  
-  imu.readAccel(ax, ay, az); // Read accelerometer data
-  imu.readGyro(gx, gy, gz); // Read gyroscope data
-  // Serial.print("Accelerometer: \n");
-  // Serial.print("ax:"); Serial.print(ax);Serial.print("\n");
-  // Serial.print("ay:"); Serial.print(ay); Serial.print("\n");
-  // Serial.print("az:"); Serial.println(az); //Serial.print("\n");
-  // Serial.println("----------------------------");
-
-  // Serial.print("Gyroscope: \n");
- /* Serial.print("gX:"); Serial.print(gx);Serial.print("\n");
-  Serial.print("gY:"); Serial.print(gy); Serial.print("\n");
-  Serial.print("gZ:"); Serial.println(gz); Serial.print("\n");
-  delay(100); // Delay for readability
-  */
-
-  // Serial.println("----------------------------");
-  ekf.predict({gx, gy, gz}, 0.01); // Predict state with gyroscope data
-  ekf.update({ax, ay, az}); // Update state with accelerometer data
-  BLA::Matrix<3, 1> attitude = ekf.getAttitude(); // Get attitude from EKF
-  float roll = attitude(0) * rad_to_deg; // Roll
-  float pitch = attitude(1) * rad_to_deg; // Pitch
-  Serial.print("Roll:"); Serial.print(roll); Serial.print("\n");
-  Serial.print("Pitch:"); Serial.print(pitch); Serial.print("\n");
-  delay(10); // Delay for readability
-  #endif
-
-  #ifdef GPS_TEST
-  
+  // Check for serial commands
+  if (Serial.available() > 0) {
+    char cmd = Serial.read();
     
-      // Position
-      Serial.print("Lat: ");
-      Serial.println(myGNSS.getLatitude() / 1e7, 7); // degrees
-      Serial.print("Lon: ");
-      Serial.println(myGNSS.getLongitude() / 1e7, 7);
-      Serial.print("Alt: ");
-      Serial.println(myGNSS.getAltitude() / 1000.0); // meters
-
-      // Velocity
-      Serial.print("Speed (3D): ");
-      Serial.println(myGNSS.getGroundSpeed() / 1000.0); // m/s
-      Serial.print("Heading: ");
-      Serial.println(myGNSS.getHeading() / 1e5); // degrees
-
-      // Time
-      Serial.printf("UTC Time: %02d:%02d:%02d\n", 
-        myGNSS.getHour(), myGNSS.getMinute(), myGNSS.getSecond());
-
-      Serial.printf("Date: %04d-%02d-%02d\n", 
-        myGNSS.getYear(), myGNSS.getMonth(), myGNSS.getDay());
-
-      // Fix info
-      Serial.print("Fix Type: ");
-      Serial.println(myGNSS.getFixType()); // 0 = none, 3 = 3D fix
-      Serial.print("Satellites: ");
-      Serial.println(myGNSS.getSIV());
-
-      Serial.println("----------------------------");
+    if (cmd == 'c' || cmd == 'C') {
+      calibrationMode = !calibrationMode;
+      if (calibrationMode) {
+        Serial.println("Calibration Mode ON");
+        Serial.println("Move sticks to extremes and center");
+      } else {
+        Serial.println("Calibration Mode OFF");
+        // Apply calibration if needed
+      }
+    } else if (cmd == 'd' || cmd == 'D') {
+      enableDebug = !enableDebug;
+      Serial.print("Debug output: ");
+      Serial.println(enableDebug ? "ON" : "OFF");
+    }
+  }
+  
+  // Update commands from receiver
+  commandReader.update();
+  
+  // Get the roll, pitch, and flaps commands
+  float rollCommand = commandReader.getRollCommand();
+  float pitchCommand = commandReader.getPitchCommand();
+  float flapsCommand = commandReader.getFlapsCommand();
+  
+  // Check for signal validity
+  bool signalValid = commandReader.isSignalValid();
+  
+  // Display information periodically to avoid flooding the serial port
+  unsigned long currentTime = millis();
+  if (currentTime - lastDisplayTime >= DISPLAY_INTERVAL) {
+    lastDisplayTime = currentTime;
     
-
-  delay(1000);
-  #endif
-};
+    if (calibrationMode) {
+      // Display raw values for calibration
+      Serial.println("--- Calibration Data ---");
+      Serial.print("Roll Raw: ");
+      Serial.print(commandReader.getRawRoll());
+      Serial.print(" | Pitch Raw: ");
+      Serial.print(commandReader.getRawPitch());
+      Serial.print(" | Flaps Raw: ");
+      Serial.println(commandReader.getRawFlaps());
+    }
+    else if (enableDebug) {
+      // Print debug information
+      Serial.print("Signal: ");
+      Serial.print(signalValid ? "VALID" : "LOST");
+      Serial.print(" | Roll: ");
+      Serial.print(rollCommand);
+      Serial.print(" | Pitch: ");
+      Serial.print(pitchCommand);
+      Serial.print(" | Flaps: ");
+      Serial.println(flapsCommand);
+    }
+  }
+  
+  // Handle signal loss
+  if (!signalValid) {
+    // Reset commands to neutral if signal is lost
+    rollCommand = 0.0f;
+    pitchCommand = 0.0f;
+    flapsCommand = 0.0f;
+    
+    // Add any additional failsafe behavior here
+  }
+  
+  // Use the commands for your flight control logic here
+  // This is where you would integrate with your FlightController class
+  
+  // Don't make the loop too fast to avoid overwhelming the serial output
+  // and to give the interrupts time to capture the RC signals properly
+  delay(100); // 100Hz main loop rate
+}
