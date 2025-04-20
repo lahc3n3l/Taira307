@@ -60,8 +60,6 @@ void KalmanFilter::update(const BLA::Matrix<3>& accel) {
     P = (I - K * H) * P;
 }
 
-void KalmanFilter::getEulerAnglesDeg(float& roll, float& pitch, float& yaw) {
-    roll  = x(0) * RAD_TO_DEG;
-    pitch = x(1) * RAD_TO_DEG;
-    yaw   = x(2) * RAD_TO_DEG;
+BLA::Matrix<3> KalmanFilter::getEulerAnglesDeg() const{
+    return x * (float)RAD_TO_DEG; // return in degrees
 }
