@@ -1,8 +1,6 @@
 #include <Arduino.h>
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
-// include wire.h for I2C communication
 #include <Wire.h>
-// include IMU library
 #include <MPU6050.h>
 #include <ekf.h>
 #include <flightController.h>
