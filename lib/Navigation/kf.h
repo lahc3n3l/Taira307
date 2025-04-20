@@ -8,6 +8,8 @@ public:
 
     void predict(const BLA::Matrix<3>& u, float dt);
     void update(const BLA::Matrix<3>& accel);
+    void updateWithGnss(float course, float headingAccEst); ;
+
     void getEulerAnglesDeg(float &roll, float &pitch, float &yaw) const;
     float getRollRad() const { return x(0); }
     float getPitchRad() const { return x(1); }

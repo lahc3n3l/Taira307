@@ -19,7 +19,7 @@ KalmanFilter::KalmanFilter() {
 
     // R ~ measurement noise
     R(0,0) = R(1,1) = 0.05f * 0.05f;
-
+    
     // P ~ initial estimation error
     P(0,0) = P(1,1) = P(2,2) = 5.0f * 5.0f;
 
@@ -59,6 +59,46 @@ void KalmanFilter::update(const BLA::Matrix<3>& accel) {
     // P = (I - K * H) * P;
     P = (I - K * H) * P;
 }
+
+void KalmanFilter::updateWithGnss(float course, float headingAcc)
+{
+    // Convert course from degrees to radians
+    float yawMeasured = course * (float)DEG_TO_RAD;
+
+    // Normalize measurement to be close to state estimate
+    float yaw_est = x(2);
+    while (yawMeasured - yaw_est > PI) yawMeasured -= 2.0f * PI;
+    while (yawMeasured - yaw_est < -PI) yawMeasured += 2.0f * PI;
+
+    // Construct measurement matrix for yaw (only yaw affected)
+    BLA::Matrix<1,3> H_yaw = {0.0f, 0.0f, 1.0f};
+
+    // Measurement covariance (based on heading accuracy, convert deg² → rad²)
+    float R_yaw_val = headingAcc * (float)DEG_TO_RAD;
+    R_yaw_val *= R_yaw_val; // variance
+    BLA::Matrix<1,1> R_yaw = {R_yaw_val};
+
+    // Innovation covariance
+    BLA::Matrix<1,1> S = H_yaw * P * ~H_yaw + R_yaw;
+    if (!Invert(S)) return; // Skip update if S not invertible
+
+    // Kalman gain
+    BLA::Matrix<3,1> K = P * ~H_yaw * S;
+
+    // Measurement residual
+    BLA::Matrix<1> y = {yawMeasured};
+    x = x + K * (y - H_yaw * x);
+
+    // Identity matrix
+    BLA::Matrix<3,3> I = BLA::Matrix<3,3>{1.0f,0.0f,0.0f,
+                                          0.0f,1.0f,0.0f,
+                                          0.0f,0.0f,1.0f};
+
+    // Update covariance
+    P = (I - K * H_yaw) * P;
+}
+
+
 
 void KalmanFilter::getEulerAnglesDeg(float &roll, float &pitch, float &yaw) const {
     roll = x(0) * (float)RAD_TO_DEG;  // roll in degrees
