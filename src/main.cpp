@@ -8,11 +8,21 @@
 // define IMU instance
 MPU6050 imu;
 
+// UART pins for GPS
+#define GPS_RX_PIN 16  // ESP32 RX <- GPS TX
+#define GPS_TX_PIN 17  // ESP32 TX -> GPS RX
+#define GPS_BAUD 115200 // GPS baud rate
+HardwareSerial gpsSerial(2); // UART2  
+
 // define GPS instance
 SFE_UBLOX_GNSS myGNSS;
 
+
+
 //define Kalman filter instance
 KalmanFilter kf;
+
+
 
 
 using namespace BLA;
