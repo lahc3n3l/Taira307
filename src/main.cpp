@@ -232,7 +232,6 @@ void loop() {
     // Update servos with calculated angles
     servoController.updateServos(right_servo_angle, left_servo_angle, pitch_servo_angle);
 
-  delay(10);
   lastTime = currentTime;
 
 } // End of loop function
