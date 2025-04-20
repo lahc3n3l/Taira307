@@ -5,152 +5,74 @@
 // include IMU library
 #include <MPU6050.h>
 #include <ekf.h>
-MPU6050 imu;
+#include <flightController.h>
+#include <PIDController.h>
+#include <ServoController.h>
 
-#define IMU_TEST
-//#define GPS_TEST
-// Uncomment the above line to enable GPS test
+FlightController flightController;
 
-// UART pins for GY87
-#define GPS_RX_PIN 16  // ESP32 RX <- GPS TX
-#define GPS_TX_PIN 17  // ESP32 TX -> GPS RX
-#define GPS_BAUD 115200 // GPS baud rate
-HardwareSerial gpsSerial(2); // UART2  
-SFE_UBLOX_GNSS myGNSS;
-EKF ekf;
+// SERVO pins for left, right, and pitch servos
+#define LEFT_SERVO_PIN 9
+#define RIGHT_SERVO_PIN 10
+#define PITCH_SERVO_PIN 11
 
-// IMU6050 pins
-#define IMU_SDA 21 // ESP32 SDA pin
-#define IMU_SCL 22 // ESP32 SCL pin
+ServoController servoController(LEFT_SERVO_PIN, RIGHT_SERVO_PIN, PITCH_SERVO_PIN); 
+
+// Timing variables
+unsigned long previousTime = 0;
+float dt = 0.0f;
+
+float currentRoll = 0.0f;
+float currentPitch = 0.0f;
+float flapsAngle = 0.0f; 
 
 void setup() {
 
   Serial.begin(115200); // USB serial for debug
-  delay(1000);
-  #ifdef IMU_TEST
-  Serial.begin(115200);
-  Wire.begin();
-
-  imu.init(2, 250);  // 2g accel, 250 deg/s gyro*
-  Serial.println("Calibrating accelerometer...");
-  imu.calibrateAccel(); // Calibrate accelerometer
-  Serial.println("Calibrating gyroscope...");
-  imu.calibrateGyro(); // Calibrate gyroscope
-  float ax, ay, az;
-  imu.readAccel(ax, ay, az); // Read accelerometer data
-  ekf.initializeFromAccel({ax, ay, az}); // Initialize EKF with accelerometer data 
-
-
   delay(100);
-  #endif
+  Serial.println("Starting up...");
 
-  #ifdef GPS_TEST
-  Serial.println("GY87 Sensor Test");
+  servoController.setMaxDeflection(40.0f);
+  servoController.setLeftTrim(0.0f);
+  servoController.setRightTrim(0.0f); 
+  servoController.setPitchTrim(0.0f);
+
+  // Initialize flight controller
+  Serial.println("Initializing flight controller...");
+  flightController.setRollPID(1.2f, 0.1f, 0.05f);
+  flightController.setPitchPID(1.0f, 0.0f, 0.02f);
+  flightController.setRollTrim(0.0f);
+  flightController.setPitchTrim(0.0f);
+
+  // Set to neutral position
+  servoController.setToNeutral();
+  Serial.println("Servo controller initialized");
   
-  Wire.begin();  // Initialize I2C
-
-  // ---------------- GPS Module Setup ----------------
-
-    Serial.println("Initializing GPS module...");
-    // Begin UART communication with GPS
-    gpsSerial.begin(115200, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-
-    if (myGNSS.begin(gpsSerial)) {
-      Serial.println("GNSS module connected!");
-    } else {
-      Serial.println("Failed to connect to GNSS module.");
-    }
-
-    // Optional tuning
-    myGNSS.setNavigationFrequency(1); // 1 Hz updates
-    myGNSS.setAutoPVT(true); // Enable automatic PVT messages
-
-    Serial.println("Initializing GPS module...");
-    // Begin UART communication with GPS
+  // Initialize timing
+  previousTime = millis();
   
-    if (myGNSS.begin(gpsSerial)) {
-      Serial.println("GNSS module connected!");
-    } else {
-      Serial.println("Failed to connect to GNSS module.");
-    }
-  
-    // Optional tuning
-    myGNSS.setNavigationFrequency(1); // 1 Hz updates
-    myGNSS.setAutoPVT(true); // Enable automatic PVT messages
-
-    #endif
-  
-    // ---------- End GPS Module Setup ----------
-  }
+  };
 
 void loop() {
 
-  // ---------------- GY87 Sensor Test ----------------
-  #ifdef IMU_TEST
+  unsigned long currentTime = millis();
+  dt = (currentTime - previousTime) / 1000.0f;  // Convert to seconds
+  previousTime = currentTime;
 
-  float ax, ay, az;
-  float gx, gy, gz;
-  float rad_to_deg = 57.2957795131; // Conversion factor from radians to degrees 
-  
-  imu.readAccel(ax, ay, az); // Read accelerometer data
-  imu.readGyro(gx, gy, gz); // Read gyroscope data
-  // Serial.print("Accelerometer: \n");
-  // Serial.print("ax:"); Serial.print(ax);Serial.print("\n");
-  // Serial.print("ay:"); Serial.print(ay); Serial.print("\n");
-  // Serial.print("az:"); Serial.println(az); //Serial.print("\n");
-  // Serial.println("----------------------------");
+  float right_servo_angle = 0.0f; // Placeholder for right servo angle
+  float left_servo_angle = 0.0f; // Placeholder for left servo angle
+  float pitch_servo_angle = 0.0f; // Placeholder for pitch servo angle
 
-  // Serial.print("Gyroscope: \n");
- /* Serial.print("gX:"); Serial.print(gx);Serial.print("\n");
-  Serial.print("gY:"); Serial.print(gy); Serial.print("\n");
-  Serial.print("gZ:"); Serial.println(gz); Serial.print("\n");
-  delay(100); // Delay for readability
-  */
+  flightController.updateControlSurfaces(
+    currentRoll, 
+    currentPitch, 
+    flapsAngle, 
+    dt, 
+    right_servo_angle, 
+    left_servo_angle, 
+    pitch_servo_angle
+  );
 
-  // Serial.println("----------------------------");
-  ekf.predict({gx, gy, gz}, 0.01); // Predict state with gyroscope data
-  ekf.update({ax, ay, az}); // Update state with accelerometer data
-  BLA::Matrix<3, 1> attitude = ekf.getAttitude(); // Get attitude from EKF
-  float roll = attitude(0) * rad_to_deg; // Roll
-  float pitch = attitude(1) * rad_to_deg; // Pitch
-  Serial.print("Roll:"); Serial.print(roll); Serial.print("\n");
-  Serial.print("Pitch:"); Serial.print(pitch); Serial.print("\n");
-  delay(10); // Delay for readability
-  #endif
-
-  #ifdef GPS_TEST
-  
-    
-      // Position
-      Serial.print("Lat: ");
-      Serial.println(myGNSS.getLatitude() / 1e7, 7); // degrees
-      Serial.print("Lon: ");
-      Serial.println(myGNSS.getLongitude() / 1e7, 7);
-      Serial.print("Alt: ");
-      Serial.println(myGNSS.getAltitude() / 1000.0); // meters
-
-      // Velocity
-      Serial.print("Speed (3D): ");
-      Serial.println(myGNSS.getGroundSpeed() / 1000.0); // m/s
-      Serial.print("Heading: ");
-      Serial.println(myGNSS.getHeading() / 1e5); // degrees
-
-      // Time
-      Serial.printf("UTC Time: %02d:%02d:%02d\n", 
-        myGNSS.getHour(), myGNSS.getMinute(), myGNSS.getSecond());
-
-      Serial.printf("Date: %04d-%02d-%02d\n", 
-        myGNSS.getYear(), myGNSS.getMonth(), myGNSS.getDay());
-
-      // Fix info
-      Serial.print("Fix Type: ");
-      Serial.println(myGNSS.getFixType()); // 0 = none, 3 = 3D fix
-      Serial.print("Satellites: ");
-      Serial.println(myGNSS.getSIV());
-
-      Serial.println("----------------------------");
-    
-
-  delay(1000);
-  #endif
+  // Update servos with calculated angles
+  servoController.updateServos(right_servo_angle, left_servo_angle, pitch_servo_angle);
 };
