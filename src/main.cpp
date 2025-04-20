@@ -180,6 +180,9 @@ void loop() {
   //
   // GET ROLL AND PITCH FLAPS COMMANDS
   //
+  
+  float currentRoll = roll; // Get current roll from Kalman filter
+  float currentPitch = pitch; // Get current pitch from Kalman filter
 
     // Update commands from receiver
     commandReader.update();
