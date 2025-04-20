@@ -34,6 +34,21 @@ void setup() {
   // begin the I2C communication
   Wire.begin();
   }
+  // ---------------- GPS Module Setup ----------------
+  Serial.println("Initializing GPS module...");
+  // Begin UART communication with GPS
+  gpsSerial.begin(115200, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+
+  if (myGNSS.begin(gpsSerial)) {
+    Serial.println("GNSS module connected!");
+  } else {
+    Serial.println("Failed to connect to GNSS module.");
+  }
+
+  // Optional tuning
+  myGNSS.setNavigationFrequency(10); // 1 Hz updates
+  myGNSS.setAutoPVT(true); // Enable automatic PVT messages
+}
 
 void loop() {
 
