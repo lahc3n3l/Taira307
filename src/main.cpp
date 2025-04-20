@@ -165,27 +165,11 @@ void loop() {
     float headingGNSS = myGNSS.getHeading(10)/1e5;      // degrees
     float headingAcc = myGNSS.getHeadingAccEst(10) / 100000.0f; // degrees
 
-    // print GNSS data
-    Serial.print("GNSS Heading: ");
-    Serial.print(headingGNSS); // degrees
-    Serial.print(" | GNSS Heading Accuracy: ");
-    Serial.print(headingAcc); // degrees
-    // print lat, lon, alt, speed
-    Serial.print(" | Latitude: ");
-    Serial.print(myGNSS.getLatitude(10) / 1e7); // degrees
-    Serial.print(" | Longitude: ");
-    Serial.print(myGNSS.getLongitude(10) / 1e7); // degrees
-    Serial.print(" | Altitude: ");
-    Serial.println(myGNSS.getAltitude(10) / 1000.0f); // meters
-   
-  
-
     float gnssGroundSpeed = myGNSS.getGroundSpeed(10); // degrees (example value, replace with actual accuracy)
 
     // Update Kalman filter with GNSS heading
     if ((float) myGNSS.getGroundSpeed(10)/1000.0f > (float)GPS_GROUND_SPEED_THD) { // Check if speed is above threshold
       kf.updateWithGnss(headingGNSS, headingAcc); // Update Kalman filter with GNSS data
-      Serial.println("[INFO] Kalman filter updated with GNSS data.");
     } else {
       Serial.println("[INFO] GNSS speed too low, skipping update.");
     }
