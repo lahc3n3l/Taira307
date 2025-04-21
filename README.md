@@ -6,9 +6,9 @@ ___
 
 ### PIN DEFINITION:
 * Servos:
-    * left servo: 
-    * right servo: 
-    * pitch servo: 
+    * left servo: 13 
+    * right servo: 12 
+    * pitch servo: 14
 
 * FlySky Reciever:
     * Roll: 2 
