@@ -24,8 +24,13 @@ struct position {
 
 struct fullState {
     position pos;
+    bool isPosValid; // true if position is valid
+    bool isAttValid; // true if attitude is valid
+
+    bool isAttValid; // true if attitude is valid
     attitude att;
     float groundSpeed; // in m/s
+    bool isGroundSpeedValid; // true if ground speed is valid
     //TODO: add airspeed, vertical speed, etc.
 };
 
