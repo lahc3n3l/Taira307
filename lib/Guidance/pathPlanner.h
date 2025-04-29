@@ -8,6 +8,13 @@ struct waypoint {
     float lat; // in degrees
     float altitude; // in meters
     float speed; // in m/s
+
+    void set(float lon, float lat, float altitude, float speed) {
+        this->lon = lon;
+        this->lat = lat;
+        this->altitude = altitude;
+        this->speed = speed;
+    }
 };
 
 struct attitude {
@@ -25,7 +32,6 @@ struct position {
 struct fullState {
     position pos;
     bool isPosValid; // true if position is valid
-    bool isAttValid; // true if attitude is valid
     attitude att;
     bool isAttValid; // true if attitude is valid
 
@@ -39,26 +45,28 @@ class pathPlanner {
     public:
 
         // default constructor
-        pathPlanner();
-
-        // destructor
-        ~pathPlanner();
+        pathPlanner();;
 
         // function to add a waypoint to the list of waypoints
         void addWaypoint(float lon, float lat, float altitude, float speed);
 
-        void setMission(std::vector<waypoint> waypoints);
-
+        void addWaypoint(waypoint wp) ;
+        
         waypoint getNextWaypoint();
 
         void updateCurrentState(fullState state);
 
+        size_t getNumberOfWaypoints() const;
+
+        void setMission(std::vector<waypoint> waypoints);
 
     private:
-        std::vector<waypoint> waypoints; // list of waypoints
-        fullState currentState; // current state of the vehicle
-        int currentWaypointIdx = 0; // index to track the current waypoint
-        float arrivalThd = 1.0 ; // threshold to consider the waypoint as reached (in meters)
+    // the prefix _m is used to indicate that the variable is a member of the class
+
+        std::vector<waypoint> m_waypoints; // list of waypoints
+        fullState m_currentState; // current state of the vehicle
+        int m_currentWaypointIdx = 0; // index to track the current waypoint
+        float m_arrivalThd = 1.0 ; // threshold to consider the waypoint as reached (in meters)
 
         
 };
