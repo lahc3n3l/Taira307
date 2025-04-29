@@ -130,6 +130,26 @@ void setup() {
   flightController.setPitchPID(1.2f, 0.0f, 0.0f);
   Serial.println("Flight Controller Ready");
   
+
+  //
+  // PATHA PLANNER SETUP
+  //
+  Serial.println("Initializing path planner...");
+  // Initialize waypoints
+  // lon, lat, altitude, speed
+
+  wp1.set(48.707762099150685, 2.161669850800682, 0.0, 0.0);// Waypoint 1: first waypoint (north west)
+  wp2.set(48.707762099150685, 2.162521501152852, 0.0, 0.0);// Waypoint 2: second waypoint (north east)
+  wp3.set(48.70736953675886, 2.1624800350308355, 0.0, 0.0);// Waypoint 3: third waypoint (south east)
+  wp4.set(48.70738433090441, 2.1617043750802707, 0.0, 0.0);// Waypoint 4: fourth waypoint (south west)
+
+  // Add waypoints to the planner
+  planner.addWaypoint(wp1);
+  planner.addWaypoint(wp2);
+  planner.addWaypoint(wp3);
+  planner.addWaypoint(wp4);
+  Serial.println("Path planner initialized!");
+
   // Initialize timing
   previousTime = millis();
 
