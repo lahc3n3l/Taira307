@@ -9,6 +9,9 @@
 #include <CommandReader.h>
 #include <kf.h>
 
+// Guidance libraries
+#include "pathPlanner.h"
+
 // define IMU instance
 MPU6050 imu;
 
@@ -47,7 +50,12 @@ float currentRoll = 0.0f;
 float currentPitch = 0.0f;
 float flapsAngle = 0.0f; 
 
+// Define the path planner instance
+pathPlanner planner;
 
+// declare the waypoints 
+
+waypoint wp1, wp2, wp3, wp4;
 
 using namespace BLA;
 
