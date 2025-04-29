@@ -23,3 +23,7 @@ ___
     * sda: 21
     * scl: 22
 
+## The generale architecture used to perform autonomous missions is the following
+
+![gncArchitecture](image.png)
+
