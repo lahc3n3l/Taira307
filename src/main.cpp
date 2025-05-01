@@ -132,7 +132,7 @@ void setup() {
   
 
   //
-  // PATHA PLANNER SETUP
+  // PATH PLANNER SETUP
   //
   Serial.println("Initializing path planner...");
   // Initialize waypoints
