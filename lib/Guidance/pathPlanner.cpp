@@ -5,7 +5,7 @@ pathPlanner::pathPlanner()
 {
 }
 
-void pathPlanner::addWaypoint(float lon, float lat, float altitude, float speed)
+void pathPlanner::addWaypoint(double lon, double lat, float altitude, float speed)
 {
     waypoint wp;
     wp.set(lon, lat, altitude, speed);

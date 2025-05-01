@@ -4,12 +4,12 @@
 
 
 struct waypoint {
-    float lon; // in degrees
-    float lat; // in degrees
+    double lon; // in degrees
+    double lat; // in degrees
     float altitude; // in meters
     float speed; // in m/s
 
-    void set(float lon, float lat, float altitude, float speed) {
+    void set(double lon, double lat, float altitude, float speed) {
         this->lon = lon;
         this->lat = lat;
         this->altitude = altitude;
@@ -24,8 +24,8 @@ struct attitude {
 };
 
 struct position {
-    float lon; // in degrees
-    float lat; // in degrees
+    double lon; // in degrees
+    double lat; // in degrees
     float altitude; // in meters
 };
 
@@ -48,7 +48,7 @@ class pathPlanner {
         pathPlanner();;
 
         // function to add a waypoint to the list of waypoints
-        void addWaypoint(float lon, float lat, float altitude, float speed);
+        void addWaypoint(double lon, double lat, float altitude, float speed);
 
         void addWaypoint(waypoint wp) ;
         
