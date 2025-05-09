@@ -7,3 +7,15 @@
 
 .vscode/
 .vscode/extensions.json
+
+sim/slprj/_sfprj/EMLReport/mhYgPSri9OSPobdTzVqCfG.mat
+
+sim/slprj/_sfprj/EMLReport/ZtOg89N64dx4tMa0vcpAMC.mat
+
+*.slxc
+
+sim/slprj/sim/varcache/gncTaira307/varInfo.mat
+
+sim/slprj/sim/varcache/gncTaira307/checksumOfCache.mat
+
+*.xml
