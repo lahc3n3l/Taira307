@@ -6,3 +6,7 @@
 .vscode
 
 .vscode/
+sim/gncTaira307.slxc
+sim/slprj/sim/varcache/gncTaira307/tmwinternal/simulink_cache.xml
+sim/slprj/sim/varcache/gncTaira307/varInfo.mat
+sim/slprj/sim/varcache/gncTaira307/checksumOfCache.mat
