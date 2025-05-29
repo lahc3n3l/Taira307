@@ -47,6 +47,9 @@ float currentRoll = 0.0f;
 float currentPitch = 0.0f;
 float flapsAngle = 0.0f; 
 
+// Initialize DataLogger - logs every 50ms (20Hz)
+DataLogger dataLogger(50);
+
 
 
 using namespace BLA;
