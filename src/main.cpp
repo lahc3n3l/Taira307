@@ -8,6 +8,7 @@
 #include <ServoController.h>
 #include <CommandReader.h>
 #include <kf.h>
+#include <dataLogger.h>
 
 // define IMU instance
 MPU6050 imu;
@@ -63,6 +64,34 @@ void setup() {
 
   // begin the I2C communication
   Wire.begin();
+
+      //
+    // DATALOGGER INITIALIZATION (First priority for logging everything)
+    //
+    Serial.println("Initializing DataLogger...");
+    if (dataLogger.begin("/flight_logs", "flight_data")) {
+        Serial.println("DataLogger initialized successfully!");
+        
+        // Configure logging parameters
+        dataLogger.setLogInterval(50);        // Log every 50ms (20Hz)
+        dataLogger.setFlushInterval(20);      // Flush every 20 entries (1 second)
+        dataLogger.setMaxFileSize(100 * 1024 * 1024); // 100MB max file size
+        
+        // Log system startup
+        dataLogger.logMessage("ESP32-S3 Flight Controller startup", "INFO");
+        dataLogger.logMessage("DataLogger configured: 20Hz, 100MB max file", "INFO");
+        
+        Serial.println(" DataLogger Configuration:");
+        Serial.println("   - Log Rate: 20Hz (50ms interval)");
+        Serial.println("   - Flush Rate: 20 entries (1 second)");
+        Serial.println("   - Max File Size: 100MB");
+        
+        dataLogger.printStatus();
+    } else {
+        Serial.println(" DataLogger initialization failed!");
+        Serial.println(" Continuing without data logging...");
+    }
+
 
   // 
   // IMU SETUP
