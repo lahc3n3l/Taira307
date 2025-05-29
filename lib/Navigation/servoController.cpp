@@ -143,12 +143,6 @@ void ServoController::updateServos(float rightAngle, float leftAngle, float pitc
     rightPosition = rightAngle;
     pitchPosition = pitchAngle;
     // print for debugging
-    Serial.print("Left Servo Angle: ");
-    Serial.print(leftAngle);
-    Serial.print(" Right Servo Angle: ");
-    Serial.print(rightAngle);
-    Serial.print(" Pitch Servo Angle: ");
-    Serial.println(pitchAngle);
 
     
     // Write angles to servos

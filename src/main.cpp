@@ -170,7 +170,6 @@ void loop() {
     // Update Kalman filter with GNSS heading
     if ((float) myGNSS.getGroundSpeed(10)/1000.0f > (float)GPS_GROUND_SPEED_THD) { // Check if speed is above threshold
       kf.updateWithGnss(headingGNSS, headingAcc); // Update Kalman filter with GNSS data
-      Serial.println("[INFO] Kalman filter updated with GNSS data.");
     } else {
       Serial.println("[INFO] GNSS speed too low, skipping update.");
     }
@@ -217,7 +216,6 @@ void loop() {
     // Update servos with calculated angles
     servoController.updateServos(right_servo_angle, left_servo_angle, pitch_servo_angle);
 
-  delay(10);
   lastTime = currentTime;
 
 } // End of loop function

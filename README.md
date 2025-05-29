@@ -6,9 +6,9 @@ ___
 
 ### PIN DEFINITION:
 * Servos:
-    * left servo: 
-    * right servo: 
-    * pitch servo: 
+    * left servo: 13 
+    * right servo: 12 
+    * pitch servo: 14
 
 * FlySky Reciever:
     * Roll: 2 
@@ -22,4 +22,8 @@ ___
 * MPU5060: 
     * sda: 21
     * scl: 22
+
+# The general architecture used to perform autonomous missions is the following
+
+![gncArchitecture](image.png)
 
