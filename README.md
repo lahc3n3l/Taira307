@@ -27,3 +27,9 @@ ___
 
 ![gncArchitecture](image.png)
 
+
+# run and upload a specif target to the board:
+pio run -e name_of_env -t upload
+
+example : 
+pio run -e goouuu -t upload

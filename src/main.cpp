@@ -8,6 +8,7 @@
 #include <ServoController.h>
 #include <CommandReader.h>
 #include <kf.h>
+#include <dataLogger.h>
 
 // define IMU instance
 MPU6050 imu;
@@ -47,6 +48,8 @@ float currentRoll = 0.0f;
 float currentPitch = 0.0f;
 float flapsAngle = 0.0f; 
 
+// Initialize DataLogger - logs every 50ms (20Hz)
+DataLogger dataLogger;
 
 
 using namespace BLA;
@@ -59,7 +62,17 @@ void setup() {
   Serial.println("Starting up...");
 
   // begin the I2C communication
-  Wire.begin();
+  Wire.begin(36, 35); // SDA, SCL pins for ESP32 (36, 35 are default for GOOUUU board)
+
+  //
+  // DATALOGGER INITIALIZATION (First priority for logging everything)
+  //
+  Serial.println("Initializing DataLogger...");
+  if (dataLogger.begin()) {
+      Serial.println("DataLogger ready!");
+  } else {
+      Serial.println("DataLogger failed!");
+  }
 
   // 
   // IMU SETUP
@@ -143,7 +156,7 @@ void loop() {
   // read the IMU data
   imu.readAccel(ax, ay, az); // Read accelerometer data
   imu.readGyro(gx, gy, gz); // Read gyroscope data
-
+  Serial.printf("IMU Data - Accel: [%.2f, %.2f, %.2f] m/s², Gyro: [%.2f, %.2f, %.2f] rad/s\n", ax, ay, az, gx, gy, gz);
   
   // define acceleration and gyroscope matrices
   BLA::Matrix<3, 1> accel = {ax, ay, az};
@@ -160,6 +173,11 @@ void loop() {
   // Get Euler angles in degrees
   kf.getEulerAnglesDeg(roll, pitch, yaw);
 
+  // 
+  // GET GPS DATA
+  //
+
+  float gpsLat = 0.0f, gpsLon = 0.0f, gpsAlt = 0.0f;
   if (myGNSS.getPVT(10)) { // Wait for GNSS data
     // Get GNSS data
     float headingGNSS = myGNSS.getHeading(10)/1e5;      // degrees
@@ -212,11 +230,19 @@ void loop() {
       left_servo_angle, 
       pitch_servo_angle
     );
-  
+    
     // Update servos with calculated angles
     servoController.updateServos(right_servo_angle, left_servo_angle, pitch_servo_angle);
 
   lastTime = currentTime;
+  // Log data
+    dataLogger.logData(
+        roll, pitch, yaw,
+        ax, ay, az,
+        gx * RAD_TO_DEG, gy * RAD_TO_DEG, gz * RAD_TO_DEG,
+        gpsLat, gpsLon, gpsAlt
+    );
+    delay(200); // Log every 50ms (20Hz)
 
 } // End of loop function
 
