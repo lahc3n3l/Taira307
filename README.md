@@ -23,7 +23,14 @@ ___
     * sda: 21
     * scl: 22
 
+<<<<<<< Updated upstream
 # The general architecture used to perform autonomous missions is the following
 
 ![gncArchitecture](image.png)
 
+=======
+
+### Design:
+
+![alt text](image.png)
+>>>>>>> Stashed changes
