@@ -1,7 +1,6 @@
 // src/testSD_goouuu.cpp
 #include <Arduino.h>
 #include <SD_MMC.h>
-
 void setup() {
     Serial.begin(115200);
     delay(3000);  // Wait for serial
