@@ -20,8 +20,8 @@ ___
     * scl: 17
 
 * MPU5060: 
-    * sda: 21
-    * scl: 22
+    * sda: 36
+    * scl: 35
 
 # The general architecture used to perform autonomous missions is the following
 
