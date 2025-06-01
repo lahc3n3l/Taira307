@@ -23,3 +23,7 @@ ___
     * sda: 21
     * scl: 22
 
+
+### Design:
+
+![alt text](image.png)

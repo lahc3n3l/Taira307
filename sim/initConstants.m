@@ -1,25 +1,26 @@
-clear
+clear 
 clc
 close
 
 %% Define constants
 
-x0 = [85;
-    0;
-    0;
-    0;
-    0;
-    0;
-    0;
-    0.3 % 5.73 deg
-    0];
+x0 = [85;    % Initial forward velocity (m/s)
+    0;      % Initial lateral velocity (m/s)
+    0;      % Initial vertical velocity (m/s)
+    0;      % Initial roll rate (rad/s)
+    0;      % Initial pitch rate (rad/s)
+    0;      % Initial yaw rate (rad/s)
+    0;      % Initial roll angle (rad)
+    0.01;    % Initial pitch angle (rad) (5.73 degrees)
+    0];     % Initial yaw angle (rad)
 
-u = [0;
-    -0; % -5.73 deg
-    0;
-    0.0;
-    0.0];
-TF = 60; % seconds
+u = [0.0;    % Aileron deflection (rad)
+    0.0;    % Elevator deflection (rad)
+    0.0;     % Rudder deflection (rad)
+    0.08];   % Throttle setting (normalized)
+
+% TF: Simulation time (seconds)
+TF = 60*3; % 3 minutes
 
 % aileron command
 u1min = -25 * pi/180;
@@ -40,7 +41,26 @@ u4max = 10 * pi/180;
 % throttle 2 command
 u5min = 0.5 * pi/180;
 u5max = 10 * pi/180;
+%% compute trim 
+params.u1min = u1min; % Aileron min deflection
+params.u1max = u1max; % Aileron max deflection
+params.u2min = u2min; % Stabilator min deflection
+params.u2max = u2max; % Stabilator max deflection
+params.u3min = u3min; % Rudder min deflection
+params.u3max = u3max; % Rudder max deflection
+params.u4min = u4min; % Throttle 1 min setting
+params.u4max = u4max; % Throttle 1 max setting
+params.u5min = u5min; % Throttle 2 min setting
+params.u5max = u5max; % Throttle 2 max setting
+u_trim = computeTrim(x0, params);
+disp('Trimmed Control Inputs:')
+disp(u_trim);
+u = u_trim(1:end-1);
 
+%% linearized model 
+[A, B, C, D] = linmod('gncTaira307', x0, u);
+sys = ss(A, B, C, D);
+s
 %% Run the model
 
 sim('gncTaira307.slx')
@@ -167,3 +187,52 @@ subplot(3,3,9);
 plot(t, rad2deg(psi)); ylabel('\psi (deg)'); title('Yaw Angle');
 
 xlabel('Time (s)');
+
+% Function to compute trim values for a given state
+function [u_trim] = computeTrim(x_trim, params)
+    % Inputs:
+    % x_trim: Desired state vector [u, v, w, p, q, r, phi, theta, psi]
+    % params: Aircraft parameters (e.g., aerodynamic coefficients, mass, inertia)
+
+    % Outputs:
+    % u_trim: Control input vector [aileron, stabilator, rudder, throttle1, throttle2]
+
+    % Define optimization problem
+    options = optimoptions('fmincon', 'Display', 'iter', 'Algorithm', 'sqp');
+
+    % Initial guess for control inputs
+    u0 = [0; 0; 0; 0.08; 0.08]; % Neutral control inputs
+
+    % Define bounds for control inputs
+    u_min = [params.u1min; params.u2min; params.u3min; params.u4min; params.u5min];
+    u_max = [params.u1max; params.u2max; params.u3max; params.u4max; params.u5max];
+
+    % Objective function: Minimize deviation from steady-state forces and moments
+    objective = @(u) trimObjective(u, x_trim, params);
+
+    % Solve optimization problem
+    u_trim = fmincon(objective, u0, [], [], [], [], u_min, u_max, [], options);
+end
+
+% Objective function for trim analysis
+function cost = trimObjective(u, x_trim, params)
+    % Simulate aircraft dynamics with given state and control inputs
+    % Compute forces and moments using FixedWingPlaneModel
+    XDOT = FixedWingPlaneModel(x_trim, u);
+
+    % Extract forces and moments from state derivatives (XDOT)
+    forces = XDOT(1:3); % [udot, vdot, wdot]
+    moments = XDOT(4:6); % [pdot, qdot, rdot]
+
+    % Compute cost as the sum of squared deviations from zero forces and moments
+    cost = sum(forces.^2) + sum(moments.^2);
+end
+
+% Placeholder for aircraft dynamics function
+function [forces, moments] = aircraftDynamics(x, u, params)
+    % Compute aerodynamic, thrust, and gravitational forces and moments
+    % This function should be implemented based on the aircraft model
+
+    forces = [0; 0; 0]; % Placeholder
+    moments = [0; 0; 0]; % Placeholder
+end
